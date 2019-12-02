@@ -9,7 +9,10 @@ subject$info()
 
 
 project_name = subject$project_name
-subjects = shiny::isolate(local_data$analysis_data_raw$subjects)
+#####-----#####
+project_name = subject$project_name
+subjects = shiny::isolate(local_data$analysis_data_raw$subjects) 
+#####------#####
 
 brains = lapply(subjects, function(sub){
   rave::rave_brain2(paste0(project_name, '/', sub))

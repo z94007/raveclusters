@@ -80,7 +80,10 @@ mds_res = cmdscale(dist(indata, method = 'canberra'), k=2)
 
 plot(mds_res)
 
-
+##test
+pcs = 1:2
+plot(mds_res[,pcs], type = 'n',xlab = 'X', ylab = 'Y')
+text(mds_res[,pcs], labels = collapsed, col = colors[clusters])
 
 
 }

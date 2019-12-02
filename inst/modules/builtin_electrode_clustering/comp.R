@@ -19,7 +19,8 @@ mount_demo_subject()
 load_scripts(
   get_path('inst/modules/builtin_electrode_clustering/reactives.R'),
   get_path('inst/modules/builtin_electrode_clustering/outputs.R'),
-  get_path('inst/modules/builtin_electrode_clustering/Untitled.R'),
+  get_path('inst/modules/builtin_electrode_clustering/clustering.R'),
+  #get_path('inst/modules/builtin_electrode_clustering/clustering_evaluation.R'),
   asis = TRUE)
 
 #' define_initialization is executed every time when:
@@ -47,32 +48,37 @@ define_input_analysis_data_csv(
   reactive_target = 'local_data$analysis_data_raw', try_load_yaml = TRUE
 )
 
-
-
 define_input(
-  definition = textInput(inputId = 'text_electrode', label = 'Electrode Not loaded'),
-
-  init_args = c('label', 'value'),
-  init_expr = {
-
-    # check ?rave_prepare for what kind of data are loaded
-    loaded_electrodes = preload_info$electrodes
-
-    # Generate text for loaded electrodes
-    text = deparse_selections(loaded_electrodes)
-    
-    previous_val = parse_selections(cache_input('text_electrode', ''))
-    if( any(previous_val %in% loaded_electrodes) ){
-      previous_val = previous_val[previous_val %in% loaded_electrodes]
-      value = deparse_selections(previous_val)
-    }else{
-      value = text
-    }
-
-    # Update
-    label = paste0('Electrode (', text, ')')
-  }
+  definition = checkboxInput(inputId = 'check_scale', label = 'Z-score data',
+                             value = FALSE
+  )
 )
+
+
+# define_input(
+#   definition = textInput(inputId = 'text_electrode', label = 'Electrode Not loaded'),
+# 
+#   init_args = c('label', 'value'),
+#   init_expr = {
+# 
+#     # check ?rave_prepare for what kind of data are loaded
+#     loaded_electrodes = preload_info$electrodes
+# 
+#     # Generate text for loaded electrodes
+#     text = deparse_selections(loaded_electrodes)
+#     
+#     previous_val = parse_selections(cache_input('text_electrode', ''))
+#     if( any(previous_val %in% loaded_electrodes) ){
+#       previous_val = previous_val[previous_val %in% loaded_electrodes]
+#       value = deparse_selections(previous_val)
+#     }else{
+#       value = text
+#     }
+# 
+#     # Update
+#     label = paste0('Electrode (', text, ')')
+#   }
+# )
 #define_input(definition = numericInput(inputId = 'nclusters', label = 'the number of clusters'))
 
 
@@ -98,11 +104,25 @@ define_input(
 )
 
 define_input(
-  definition = selectInput(inputId = 'distance_method', label = 'Distance Measurement',
-                           choices = c('Euclidean', 'Maximum',"Manhattan", "Canberra", "Binary" , "Minkowski"), selected = NULL),
+  definition = sliderInput(inputId = 'time_window', label = 'Time Window', min = -1, max= 2,
+                           value = c(0,1),step = 0.01)
+)
+
+define_input(
+  definition = selectInput(inputId = 'distance_method', label = 'Clustering Distance Measurement',
+                           choices = c('euclidean', 'maximum',"manhattan", "canberra", "minkowski"), selected = NULL),
   init_args = c('selected'),
   init_expr = {
-    selected = cache_input('dsitance_method', 'Manhattan')
+    selected = cache_input('distance_method', 'manhattan')
+  }
+)
+
+define_input(
+  definition = selectInput(inputId = 'mds_distance_method',label = 'MDS Distance Measurement',
+                           choices = c('euclidean', 'maximum',"manhattan","canberra"), selected = NULL),
+  init_args = c('selected'),
+  init_expr = {
+    selected = cache_input('mds_distance_method', 'manhattan')
   }
 )
 define_input(
@@ -111,24 +131,30 @@ define_input(
 
 input_layout = list(
   'Data Import' = list(
-    'analysis_data'
+    'analysis_data',
+    'check_scale'
   ),
   #[#99ccff][-]
   'Trial Selector' = list(
-    'text_electrode',
+    # 'text_electrode',
     'input_groups'
   ),
   '[#ccff99]Analysis Settings' = list(
     'input_frequencies',
     'input_baseline_range',
-    c( 'input_method', 'input_nclusters' ),'distance_method'
+    c( 'input_method', 'input_nclusters' ),
+    'time_window',
+    'distance_method',
+    'mds_distance_method'
   ),
   'Model Running' = list(
     'do_run'
   )
 )
 
-manual_inputs = c('analysis_data', 'input_baseline_range', 'text_electrode', 'input_frequencies', 'input_groups', 'input_nclusters',
+manual_inputs = c('analysis_data', 'input_baseline_range', 
+                  # 'text_electrode', 
+                  'input_frequencies', 'input_groups', 'input_nclusters',
                   'input_method', unlist(sapply(1:20, function(ii){ paste0('input_groups_', c('group_name', 'group_conditions'), '_', ii) })))
 
 # End of input
@@ -168,16 +194,25 @@ manual_inputs = c('analysis_data', 'input_baseline_range', 'text_electrode', 'in
 define_output(
   definition = plotOutput('tsne_plot'),
   title = 'MDS Diagnosis',
-  width = 3,
+  width = 6,
   order = 2
 )
+
 
 define_output(
   definition = plotOutput('cluster_plot'),
   title = 'Cluster Visualization',
-  width = 9,
+  width = 6,
   order = 1
 )
+# if (input_method == 'H-Clust' && !is.null(local_data$my_resultsmds_res)) {
+#   plot()
+# }
+# define_output(
+#   definition = plotOutput('cluster_plot1'),
+#   title = 'Cluster Visualization',
+#   width = 9,
+#   order = 3)
 
 define_output_3d_viewer(outputId = 'viewer_3d', title = '3D Cluster', order = 999, height = '500px')
 
