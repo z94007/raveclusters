@@ -5,7 +5,6 @@ require(raveclusters)
 # Initialize inputs
 dev_raveclusters(expose_functions = TRUE)
 
-#rave::rave_prepare('congruency/YAB', 14:63, epoch = 'YABaOutlier', time_range = c(1, 2))
 mount_demo_subject()
 
 init_module('builtin_electrode_clustering', debug = TRUE)
