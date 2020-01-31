@@ -8,7 +8,9 @@ env = dev_raveclusters(T)
 #' Load subject for debugging
 #' Make sure this is executed before developing the module to make sure
 #' at least one subject is loaded
-mount_demo_subject()
+rave::mount_demo_subject()
+
+# rave::init_module('builtin_electrode_clustering')
 
 
 # >>>>>>>>>>>> Start ------------- [DO NOT EDIT THIS LINE] ---------------------
@@ -86,17 +88,12 @@ define_input_condition_groups('input_groups', label = 'Condition Group')
 
 define_input(
   definition = numericInput(inputId = 'input_nclusters', label = 'Number of Clusters', 
-                            value = 1, min = 1, max = 10, step = 1),
-  init_args = c("value", 'max'),
-  init_expr = {
-    max = length(preload_info$electrodes)
-    value = cache_input('input_nclusters', max(min(ceiling(max / 3), 6), 2))
-  }
+                            value = 2, min = 1, max = 1e3, step = 1)
 )
 
 define_input(
   definition = selectInput(inputId = 'input_method', label = 'Clustering Method',
-                           choices = c('H-Clust', 'K-Means'), selected = NULL),
+                           choices = c('H-Clust', 'PAM'), selected = NULL),
   init_args = c('selected'),
   init_expr = {
     selected = cache_input('input_method', 'H-Clust')
@@ -125,8 +122,15 @@ define_input(
     selected = cache_input('mds_distance_method', 'manhattan')
   }
 )
+
 define_input(
-  definition = shiny::actionButton('do_run', 'Run Analysis')
+  definition = checkboxInput(inputId = 'op_run', label = 'Optimal Number of Clusters Analysis',
+                             value = FALSE)
+  )
+
+
+define_input(
+  definition = actionButton('do_run', 'Run Analysis')
 )
 
 input_layout = list(
@@ -140,12 +144,11 @@ input_layout = list(
     'input_groups'
   ),
   '[#ccff99]Analysis Settings' = list(
-    'input_frequencies',
-    'input_baseline_range',
     c( 'input_method', 'input_nclusters' ),
     'time_window',
     'distance_method',
-    'mds_distance_method'
+    'mds_distance_method',
+    'op_run'
   ),
   'Model Running' = list(
     'do_run'
@@ -194,7 +197,7 @@ manual_inputs = c('analysis_data', 'input_baseline_range',
 define_output(
   definition = plotOutput('tsne_plot'),
   title = 'MDS Diagnosis',
-  width = 6,
+  width = 4,
   order = 2
 )
 
@@ -202,9 +205,31 @@ define_output(
 define_output(
   definition = plotOutput('cluster_plot'),
   title = 'Cluster Visualization',
-  width = 6,
+  width = 8,
   order = 1
 )
+
+define_output(
+  definition = customizedUI('cluster_membership'),
+  title = 'Clustering Membership',
+  width = 5L,
+  order = 2.1
+)
+
+define_output(
+  definition = plotOutput('dendrogram_output'),
+  title = 'Dendrogram',
+  width = 7L,
+  order = 2.15
+)
+
+define_output(
+  definition = plotOutput('optimal_output'),
+  title = 'Optimal number of clusters',
+  width = 12L,
+  order = 2.16
+)
+
 # if (input_method == 'H-Clust' && !is.null(local_data$my_resultsmds_res)) {
 #   plot()
 # }
@@ -223,5 +248,6 @@ define_output_3d_viewer(outputId = 'viewer_3d', title = '3D Cluster', order = 99
 
 # Preview
 
-view_layout('builtin_electrode_clustering', sidebar_width = 3, launch.browser = T)
+view_layout('builtin_electrode_clustering', theme = 'blue')
+
 

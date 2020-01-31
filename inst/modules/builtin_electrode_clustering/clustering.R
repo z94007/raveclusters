@@ -7,11 +7,24 @@
 #----------------------------------------------
 
 observeEvent(input$do_run, {
-  print('lalalala')
+  print('lalalala')#FIXME
   res = clustering_analysis()
   local_data$my_results = res
+  
+  
+  # update the number of clusters to the actual number of clusters obtained, rather than the requested number of clusters
+  updateNumericInput(getDefaultReactiveDomain(), 'input_nclusters', value = length(unique(res$clusters_res)))
+  
 })
-
+# 
+# observeEvent(input$analysis_data_btn, {
+#   # print('trying to count # els')
+#   
+#   # uniq_electrodes = unique(local_data$analysis_data_raw$data %$% paste0(Subject, Electrode))
+#   # print(uniq_electrodes)
+#   # 
+#   # updateNumericInput(getDefaultReactiveDomain(),inputId = 'input_nclusters', max = length(uniq_electrodes))
+# })
 
 
 
@@ -161,13 +174,22 @@ clustering_analysis <- function(){
   
   
   #clustering
-  print('start clustring analysis')
+  print('start clustering analysis')
+  
+  n_clust = min(input$input_nclusters, nrow(collapsed))
+  
+  #input = ...input
+  dis = stats::dist(indata, method = input$distance_method)
   if (input$input_method == "H-Clust"){
-    hcl = hclust(stats::dist(indata, method = input$distance_method), method = 'ward.D')
-    clusters <- cutree(hcl, k = input$input_nclusters)
-  } else if (input$input_method == "K-Means") {
-    km <- kmeans(indata, centers = input$input_nclusters, iter.max = 100)
-    clusters <- km$cluster
+    hcl = stats::hclust(dis, method = 'ward.D')
+    local_data$cluster_method_output = hcl
+    clusters <- cutree(hcl, k = n_clust)
+  } else if (input$input_method == "PAM") {
+    #km <- kmeans(indata, centers = n_clust,iter.max = 100, )
+    #clusters <- km$cluster
+    km <- cluster::pam(dis, k = n_clust,  cluster.only = TRUE, keep.data = FALSE, keep.diss = FALSE)
+    local_data$cluster_method_output = km
+    clusters <- km
   }
   
   #clusters = res$clusters_res 
@@ -176,7 +198,7 @@ clustering_analysis <- function(){
     # rutabaga::collapse(indata[clusters == ci, , drop = FALSE], average = TRUE, keep = 2)
      apply(indata[clusters == ci,,drop=FALSE], 2, rutabaga::m_se)
     
-    #cluster_mean = colMeans(indata[clusters == ci, , drop = FALSE])
+    #cluster_mean = colMeans(indata[clusters == c0i, , drop = FALSE])
     
     # Calculate total variances
     # total_var = colSums(merged$collapsed_var[clusters == ci, -c(1,2), drop = FALSE])

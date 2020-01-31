@@ -3,7 +3,7 @@ text_result <- function(result){
   
   
   validate(
-    need(!is.null(baselined), msg = 'Not baselined')
+    need(!is.null(baselined), message = 'Not baselined')
   )
   # shiny:::reactiveStop('This is an error message', c("validation"))
   

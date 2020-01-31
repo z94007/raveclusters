@@ -2,6 +2,7 @@
 
 export(dev_raveclusters)
 import(Rtsne)
+import(dipsaus)
 import(graphics)
 import(rave)
 import(rlang)

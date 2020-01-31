@@ -4,8 +4,9 @@
 
 
 tsne_plot <- function(){
-  res <- local_data$my_results
+  # rave::rave_context()
   
+  res <- local_data$my_results
   
   shiny::validate(
     shiny::need(!is.null(res$indata) && ncol(res$indata) > 2, message = 'Please press "Run Analysis" button.'),
@@ -14,8 +15,10 @@ tsne_plot <- function(){
                   res$input_nclusters > 1, message = 'Number of clusters must be greater than 1')
   )
   
-  mds_res = cmdscale(dist(res$indata, method = input$mds_distance_method), k=2)
+  rave::set_rave_theme()
   
+  mds_res = cmdscale(dist(res$indata, method = input$mds_distance_method), k=2)
+  # ravebuiltins:::set_palette_helper
   assign('res', res, envir = globalenv())
   
   #colors
@@ -31,26 +34,108 @@ tsne_plot <- function(){
 }
 
 
+cluster_membership <- function(){
+  
+  if(is.list(local_data$my_results)){
+    tbl = convert_cluster_table(local_data$my_results$cluster_table,split_by = 'Subject', var = "Cluster", value = "Electrode")
+    div(
+      style = 'overflow-x:scroll; height: 380px',
+      HTML(knitr::kable(tbl, format = 'html', row.names = FALSE, table.attr = 'class="table shiny-table table-striped"')) # spacing-xs
+    )
+  }else{
+    div(
+      style = 'height: 380px',
+    )
+  }
+  
+}
+
+
+dendrogram_output <- function() {
+  res <- local_data$my_results
+  
+  shiny::validate(shiny::need(!is.null(res$cluster_mse), message = 'Please press "Run Analysis" '))
+  
+  shiny::validate(shiny::need(input$input_method == 'H-Clust', 'Only available for method = H-clust'))
+  
+  shiny::validate(shiny::need('hclust' %in% class(local_data$cluster_method_output), message = 'Please press "Run Analysis" '))
+  
+  labels = res$collapsed %$% paste0(Subject, Electrode)
+  
+  leafCol <- function(x){
+    if(stats::is.leaf(x)){
+      attr(x,'label') <- labels[x]
+      attr(x, 'nodePar') <- list(lab.col = res$colors[res$clusters_res[x]],pch = 46) #FIXME
+    }
+    return(x)
+  } 
+
+  rave::set_rave_theme()
+  plot(stats::dendrapply(as.dendrogram(local_data$cluster_method_output), leafCol),las = 1) 
+  ravebuiltins:::rave_title(sprintf('%s %d %s %d %s','Hierarchical clustering of',length(res$collapsed$Electrode),
+                                    'electrodes across',length(unique(res$collapsed$Subject)),'patients'))
+}
+
+optimal_output <- function(){
+  res <- local_data$my_results
+  shiny::validate(
+    shiny::need(isTRUE(input$op_run), message = 'Xxx disabled'), 
+    shiny::need(!is.null(res)&&!is.null(res$indata), message = 'Please press "Run Analysis" after loading data')
+  )
+    
+  rave::set_rave_theme()
+  #, message = 'Please press "Optimal Number of Clusters Analysis" '))
+ # observe(input$op_run,{  
+  
+  methods = c('silhouette','wss')
+  if (input$input_method == "H-Clust"){
+    clustfun = factoextra::hcut
+  } else if (input$input_method == "PAM") {
+    clustfun = cluster::pam
+  }
+  par(mfrow= c(1,2))
+  
+  op_res <- lapply(methods, function(x){
+    factoextra::fviz_nbclust(res$indata,FUNcluster = clustfun, method =x, 
+                             k.max = ceiling(dim(res$indata)[1]/2))
+  })
+  junk <- lapply(op_res, function(x){
+    plot(x$data$y, pch = 20, type = 'o', xlab = x$labels$x, ylab =x$labels$y, lwd=2,las = 1)
+    lst <- sort(x$data$y, index.return=TRUE, decreasing=TRUE)
+    if(!is.null(x$labels$xintercept)){points(lst$ix[1:3],lst$x[1:3],col = 'red',pch =19)}
+    }
+  )
+  #})
+
+}
+
+
 cluster_plot <-  function(){
   
  palette(ravebuiltins:::rave_colors$GROUP)
   
  res <- local_data$my_results
  
+ nclust = length(unique(res$clusters_res))
+ 
  shiny::validate(shiny::need(!is.null(res$cluster_mse), message = 'Please press "Run Analysis" '))
  
- if( res$input_nclusters <= 3 ){
-   par(mfrow = c(1, res$input_nclusters))
+ rave::set_rave_theme()
+ if( nclust <= 4 ){
+   par(mfrow = c(1, nclust))
  }else{
-   nrow = ceiling((res$input_nclusters) / 3)
-   par(mfrow = c(nrow, 3))
+   nrow = ceiling((nclust) / 4)
+   par(mfrow = c(nrow, 4))
  }
+ par(mar = c(2,4.1, 4.1, 2))
+ 
  #local_data = ...local_data
- time_points =  unique(local_data$analysis_data_raw$data$Time[local_data$analysis_data_raw$data$Time %within% res$time_range])
+ time_points =  unique(local_data$analysis_data_raw$data$Time[local_data$analysis_data_raw$data$Time 
+                                                              %within% res$time_range])
  n_timepoints = length(time_points)
  group_names = res$group_names
  n_cond_groups = length(group_names)
- res
+ #res
  yrange = c(min(sapply(res$cluster_mse, function(x){
    x[2,is.na(x[2,])] = 0
    min(x[1,]-x[2,], na.rm = TRUE)
@@ -60,17 +145,24 @@ cluster_plot <-  function(){
    max(colSums(x), na.rm = TRUE)
  }))+1)
  xaxi = pretty(time_points)
- yaxi = pretty(yrange)
+ # yaxi = pretty(yrange)
  
- a<- dipsaus::iapply(res$cluster_mse,function(x, cl_idx){
-   #x = res$cluster_mse[[1]]
+ junk <- dipsaus::iapply(res$cluster_mse,function(x, cl_idx){
+   # x = res$cluster_mse[[1]]
+   # cl_idx = 1
+   # time_points = preload_info$time_points
    cl_mean = x[1,]
    cl_sd = x[2,]
    
    #time_columns = names(res$indata)
    time_columns = res$time_columns
    
+   # case 1 variable y-lim
+   yrange = range(cl_mean, cl_mean+cl_sd, cl_mean-cl_sd, na.rm = TRUE)
+   # case 2 fixed yrange for all plots
    rutabaga::plot_clean(time_points, ylim=yrange) ##FIXME
+   
+   
    #gnames = NULL
    #j=1
    cols = seq_len(n_cond_groups)
@@ -89,12 +181,11 @@ cluster_plot <-  function(){
    #   print(input$input_groups[[ii]]$group_name)
    #   return(list(gnames = gnames, cols = cols))
    # }, x, seq_along(input$input_groups))
-   
-   
+   yaxi = pretty(yrange)
    rutabaga::ruta_axis(1, xaxi)
    rutabaga::ruta_axis(2, yaxi)
    legend('topright', group_names, bty='n', text.font = 2, text.col = cols)
-   title(sprintf('Cluster %d', cl_idx), col.main =res$colors[cl_idx])
+   ravebuiltins:::rave_title(sprintf('%s%d (n=%d)','Cluster', cl_idx, sum(res$clusters_res == cl_idx)), col =res$colors[cl_idx]) 
  }
  )
 
@@ -129,6 +220,10 @@ viewer_3d_fun <- function(...){
   tbl = res$cluster_table
   tbl$Cluster = paste('Cluster', tbl$Cluster)
   tbl$Project = project_name
+  
+  if(!is.data.frame(tbl)){
+    return(NULL)
+  }
   
   bs = lapply(subjects, function(sub){
     rave::rave_brain2(sprintf('%s/%s', project_name, sub))
