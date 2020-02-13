@@ -47,6 +47,6 @@ Add a use case (for example, if I want h-cluster, how to set params)
 | tsne_plot          | MDS Diagnosis              | graph   | visualize the original high dimension data in two dimension space with MDS                                               |
 | cluster_membership_table | Clustering Membership      | chart   | tables shown which electrode from which subject is in which cluster                                                      |
 | dendrogram_plot  | Dendrogram                 | diagram | hierarchical clustering only; shows how the hierarchical arrangement happens among objects                               |
-| optimal_cluster_number_plot     | Optimal number of clusters | graph   | visualize the silhouette and SSE for the different numbers of clustering, help determine the optimal numbers of clusters |
+| optimal_cluster_number_plot     | Optimal number of clusters | graph   | visualize the silhouette and SSE for the different numbers of clustering, help determine the optimal numbers of clusters (a brief introduction of silhouette and SSE method can be found [here](https://medium.com/@jyotiyadav99111/selecting-optimal-number-of-clusters-in-kmeans-algorithm-silhouette-score-c0d9ebb11308)) |
 
 
