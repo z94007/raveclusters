@@ -102,7 +102,7 @@ define_input(
 
 define_input(
   definition = sliderInput(inputId = 'time_window', label = 'Time Window', min = -1, max= 2,
-                           value = c(0,1),step = 0.01)
+                           value = c(0,1.0),step = 0.01)
 )
 
 define_input(
@@ -195,7 +195,7 @@ manual_inputs = c('analysis_data', 'input_baseline_range',
 #' @param order numeric order of outputs. Outputs will be re-ordered by this argument
 #'
 define_output(
-  definition = plotOutput('tsne_plot'),
+  definition = plotOutput('mds_plot'),
   title = 'MDS Diagnosis',
   width = 4,
   order = 2
@@ -210,21 +210,21 @@ define_output(
 )
 
 define_output(
-  definition = customizedUI('cluster_membership'),
+  definition = customizedUI('cluster_membership_table'),
   title = 'Clustering Membership',
   width = 5L,
   order = 2.1
 )
 
 define_output(
-  definition = plotOutput('dendrogram_output'),
+  definition = plotOutput('dendrogram_plot'),
   title = 'Dendrogram',
   width = 7L,
   order = 2.15
 )
 
 define_output(
-  definition = plotOutput('optimal_output'),
+  definition = plotOutput('optimal_cluster_number_plot'),
   title = 'Optimal number of clusters',
   width = 12L,
   order = 2.16

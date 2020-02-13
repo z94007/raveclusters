@@ -3,7 +3,7 @@
 # input = ...input
 
 
-tsne_plot <- function(){
+mds_plot <- function(){
   # rave::rave_context()
   
   res <- local_data$my_results

@@ -24,13 +24,9 @@ init_module('builtin_electrode_clustering', debug = TRUE)
 ######' @auto=FALSE
 
 
-# assign('...local_data', shiny::isolate(shiny::reactiveValuesToList(local_data)), envir = globalenv())
-# assign('...input', shiny::isolate(shiny::reactiveValuesToList(input)), envir = globalenv())
+assign('...local_data', shiny::isolate(shiny::reactiveValuesToList(local_data)), envir = globalenv())
+assign('...input', shiny::isolate(shiny::reactiveValuesToList(input)), envir = globalenv())
 # print('Ranranranran')
-
-
-# dat <- ...local_data$analysis_data_raw$data
-# ...input$input_groups
 
 
 
