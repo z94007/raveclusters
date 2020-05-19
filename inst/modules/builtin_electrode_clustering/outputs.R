@@ -34,7 +34,7 @@ mds_plot <- function(){
 }
 
 
-cluster_membership <- function(){
+cluster_membership_table <- function(){
   
   if(is.list(local_data$my_results)){
     tbl = convert_cluster_table(local_data$my_results$cluster_table,split_by = 'Subject', var = "Cluster", value = "Electrode")
@@ -51,7 +51,7 @@ cluster_membership <- function(){
 }
 
 
-dendrogram_output <- function() {
+dendrogram_plot <- function() {
   res <- local_data$my_results
   
   shiny::validate(shiny::need(!is.null(res$cluster_mse), message = 'Please press "Run Analysis" '))
@@ -76,7 +76,7 @@ dendrogram_output <- function() {
                                     'electrodes across',length(unique(res$collapsed$Subject)),'patients'))
 }
 
-optimal_output <- function(){
+optimal_cluster_number_plot <- function(){
   res <- local_data$my_results
   shiny::validate(
     shiny::need(isTRUE(input$op_run), message = 'Xxx disabled'), 

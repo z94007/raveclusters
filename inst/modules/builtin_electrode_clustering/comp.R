@@ -135,18 +135,18 @@ define_input(
 
 input_layout = list(
   'Data Import' = list(
-    'analysis_data',
-    'check_scale'
+    'analysis_data'
   ),
   #[#99ccff][-]
   'Trial Selector' = list(
     # 'text_electrode',
     'input_groups'
   ),
-  '[#ccff99]Analysis Settings' = list(
+  'Analysis Settings' = list(
     c( 'input_method', 'input_nclusters' ),
     'time_window',
     'distance_method',
+    'check_scale',
     'mds_distance_method',
     'op_run'
   ),
@@ -239,7 +239,7 @@ define_output(
 #   width = 9,
 #   order = 3)
 
-define_output_3d_viewer(outputId = 'viewer_3d', title = '3D Cluster', order = 999, height = '500px')
+define_output_3d_viewer(outputId = 'viewer_3d', title = '3D Cluster', order = -999, height = '500px')
 
 
 # <<<<<<<<<<<< End ----------------- [DO NOT EDIT THIS LINE] -------------------
@@ -248,6 +248,6 @@ define_output_3d_viewer(outputId = 'viewer_3d', title = '3D Cluster', order = 99
 
 # Preview
 
-view_layout('builtin_electrode_clustering', theme = 'blue')
+view_layout('builtin_electrode_clustering', theme = 'purple')
 
 
