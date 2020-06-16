@@ -17,7 +17,3 @@ modules:
   module_label: Electrode Clustering
   group_name: ~
   order: 10
-- module_id: group_analysis_lme
-  module_label: Linear Mixed Effect model
-  group_name: Group Analysis
-  order: 6

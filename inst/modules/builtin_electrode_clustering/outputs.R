@@ -1,7 +1,46 @@
+fix_font_color_button <- function (outputId, label = "Download", class = NULL, ...)  {
+  aTag <- tags$a(id = outputId, class = paste("btn shiny-download-link", 
+                                              class), href = "", target = "_blank", download = NA, 
+                 icon("download"), label, ...)
+}
+
+
+graph_export = function(){
+  tagList(
+    # actionLink(ns('btn_graph_export'), 'Export Graphs'),
+    fix_font_color_button(ns('export_pdf'), 'Export hi-res PDF', icon=shiny::icon('download'),
+                          class = 'btn btn-default text-white', width = '100%')
+    # actionLink(ns('btn_graph_export'), 'Export Graphs'),
+    
+  )
+}
+#TODO add json
+output$export_pdf <- downloadHandler(
+  filename = function(){
+    paste0(
+      paste(unique(...local_data$analysis_data_raw$subject), collapse = "_"),
+      '_', ...input$input_nclusters,'_',...input$input_method,'_',
+      format(Sys.time(), "%b_%d_%Y_%H_%M_%S"), '.pdf')
+  },
+  content = function(file){
+    pdf(file, width = 12, height = 7)
+    cluster_plot(separate = TRUE, cex.main = shiny_cex.main)
+    mds_plot()
+    dendrogram_plot()
+    #optimal_cluster_number_plot()
+    dev.off()
+    },
+
+  contentType = "application/pdf"
+
+
+)
+
+
+
 
 # local_data = ...local_data
 # input = ...input
-
 
 mds_plot <- function(){
   # rave::rave_context()
@@ -9,10 +48,10 @@ mds_plot <- function(){
   res <- local_data$my_results
   
   shiny::validate(
-    shiny::need(!is.null(res$indata) && ncol(res$indata) > 2, message = 'Please press "Run Analysis" button.'),
-    shiny::need(length(res$input_nclusters) && 
-                  !is.na(res$input_nclusters) &&
-                  res$input_nclusters > 1, message = 'Number of clusters must be greater than 1')
+    shiny::need(!is.null(res$indata) && ncol(res$indata) > 2, 
+                message = 'Please press "Run Analysis" button.'),
+    shiny::need(length(res$input_nclusters) && !is.na(res$input_nclusters) &&res$input_nclusters > 1, 
+                message = 'Number of clusters must be greater than 1')
   )
   
   rave::set_rave_theme()
@@ -23,14 +62,20 @@ mds_plot <- function(){
   
   #colors
   collapsed_data <- res$collapsed
+  
+  par(mfrow = c(1,1))
 
   pcs = 1:2
   plot(mds_res[,pcs], type = 'n',xlab = 'X', ylab = 'Y')
-  text(mds_res[,pcs], labels = paste0(collapsed_data$Subject, 
-                                          collapsed_data$Electrode), col = res$colors[res$clusters_res])
+  text(mds_res[,pcs], labels = paste0(collapsed_data$Subject,collapsed_data$Electrode),
+       col = res$colors[res$clusters_res])
   # legend('topright', sprintf('Cluster %d', seq_along(unique(res$clusters_res)),
   #                            bty='n', text.font = 2, text.col = res$colors[seq_along(unique(res$clusters_res))]))
-         
+  ravebuiltins:::rave_title(sprintf('%d %s %d %s',
+                                    length(res$collapsed$Electrode),
+                                    'electrodes across',
+                                    length(unique(res$collapsed$Subject)),
+                                    'patients'))
 }
 
 
@@ -69,17 +114,21 @@ dendrogram_plot <- function() {
     }
     return(x)
   } 
-
+  
+  par(mfrow = c(1,1))
   rave::set_rave_theme()
   plot(stats::dendrapply(as.dendrogram(local_data$cluster_method_output), leafCol),las = 1) 
-  ravebuiltins:::rave_title(sprintf('%s %d %s %d %s','Hierarchical clustering of',length(res$collapsed$Electrode),
-                                    'electrodes across',length(unique(res$collapsed$Subject)),'patients'))
+  ravebuiltins:::rave_title(sprintf('%s %d %s %d %s','Hierarchical clustering of',
+                                    length(res$collapsed$Electrode), 
+                                    'electrodes across',
+                                    length(unique(res$collapsed$Subject)),'patients'))
 }
 
 optimal_cluster_number_plot <- function(){
   res <- local_data$my_results
+  
   shiny::validate(
-    shiny::need(isTRUE(input$op_run), message = 'Xxx disabled'), 
+    shiny::need(isTRUE(input$op_run), message = 'Click the checkbox to enable'), 
     shiny::need(!is.null(res)&&!is.null(res$indata), message = 'Please press "Run Analysis" after loading data')
   )
     
@@ -102,7 +151,10 @@ optimal_cluster_number_plot <- function(){
   junk <- lapply(op_res, function(x){
     plot(x$data$y, pch = 20, type = 'o', xlab = x$labels$x, ylab =x$labels$y, lwd=2,las = 1)
     lst <- sort(x$data$y, index.return=TRUE, decreasing=TRUE)
-    if(!is.null(x$labels$xintercept)){points(lst$ix[1:3],lst$x[1:3],col = 'red',pch =19)}
+    if(!is.null(x$labels$xintercept)){
+      points(lst$ix[1:3],lst$x[1:3],col = 'red',pch =19)
+      legend('topright', 'suggested number of clusters', col = 'red',pch =19, bty='n', text.font = 2)
+      }
     }
   )
   #})
@@ -110,85 +162,99 @@ optimal_cluster_number_plot <- function(){
 }
 
 
-cluster_plot <-  function(){
+cluster_plot <-  function(separate = FALSE, cex.main = shiny_cex.main){
   
- palette(ravebuiltins:::rave_colors$GROUP)
+  palette(ravebuiltins:::rave_colors$GROUP)
   
- res <- local_data$my_results
- 
- nclust = length(unique(res$clusters_res))
- 
- shiny::validate(shiny::need(!is.null(res$cluster_mse), message = 'Please press "Run Analysis" '))
- 
- rave::set_rave_theme()
- if( nclust <= 4 ){
-   par(mfrow = c(1, nclust))
- }else{
-   nrow = ceiling((nclust) / 4)
-   par(mfrow = c(nrow, 4))
- }
- par(mar = c(2,4.1, 4.1, 2))
- 
- #local_data = ...local_data
- time_points =  unique(local_data$analysis_data_raw$data$Time[local_data$analysis_data_raw$data$Time 
-                                                              %within% res$time_range])
- n_timepoints = length(time_points)
- group_names = res$group_names
- n_cond_groups = length(group_names)
- #res
- yrange = c(min(sapply(res$cluster_mse, function(x){
-   x[2,is.na(x[2,])] = 0
-   min(x[1,]-x[2,], na.rm = TRUE)
- }))-1
-   ,max(sapply(res$cluster_mse, function(x){
-   x[2,is.na(x[2,])] = 0
-   max(colSums(x), na.rm = TRUE)
- }))+1)
- xaxi = pretty(time_points)
- # yaxi = pretty(yrange)
- 
- junk <- dipsaus::iapply(res$cluster_mse,function(x, cl_idx){
-   # x = res$cluster_mse[[1]]
-   # cl_idx = 1
-   # time_points = preload_info$time_points
-   cl_mean = x[1,]
-   cl_sd = x[2,]
-   
-   #time_columns = names(res$indata)
-   time_columns = res$time_columns
-   
-   # case 1 variable y-lim
-   yrange = range(cl_mean, cl_mean+cl_sd, cl_mean-cl_sd, na.rm = TRUE)
-   # case 2 fixed yrange for all plots
-   rutabaga::plot_clean(time_points, ylim=yrange) ##FIXME
-   
-   
-   #gnames = NULL
-   #j=1
-   cols = seq_len(n_cond_groups)
-   lapply(seq_len(n_cond_groups), function(j){
-     
-     sel = stringr::str_ends(time_columns, paste0('_', j))
-     time = as.numeric(stringr::str_extract(time_columns[sel], '^[^_]+'))
-     
-     rutabaga::ebar_polygon(time, cl_mean[sel], sem = cl_sd[sel], col = cols[[j]])
-   })
-   
-   # gc <- mapply(function(sub_x,ii){
-   #   lines(time_points, sub_x, col =ii)
-   #   cols <- c(cols,ii)
-   #   gnames <- c(gnames,input$input_groups[[ii]]$group_name)
-   #   print(input$input_groups[[ii]]$group_name)
-   #   return(list(gnames = gnames, cols = cols))
-   # }, x, seq_along(input$input_groups))
-   yaxi = pretty(yrange)
-   rutabaga::ruta_axis(1, xaxi)
-   rutabaga::ruta_axis(2, yaxi)
-   legend('topright', group_names, bty='n', text.font = 2, text.col = cols)
-   ravebuiltins:::rave_title(sprintf('%s%d (n=%d)','Cluster', cl_idx, sum(res$clusters_res == cl_idx)), col =res$colors[cl_idx]) 
- }
- )
-
+  res <- local_data$my_results
+  
+  nclust = length(unique(res$clusters_res))
+  
+  shiny::validate(shiny::need(!is.null(res$cluster_mse), message = 'Please press "Run Analysis" '))
+  
+  rave::set_rave_theme()
+  if( separate ){
+    
+  } else {
+    if( nclust <= 4 ){
+      par(mfrow = c(1, nclust))
+    }else{
+      nrow = ceiling((nclust) / 4)
+      par(mfrow = c(nrow, 4))
+    }
+    par(mar = c(2,4.1, 4.1, 2))
+  }
+  
+  
+  #local_data = ...local_data
+  time_points =  unique(local_data$analysis_data_raw$data$Time[local_data$analysis_data_raw$data$Time 
+                                                               %within% res$time_range])
+  n_timepoints = length(time_points)
+  group_names = res$group_names
+  n_cond_groups = length(group_names)
+  #res
+  yrange = c(min(sapply(res$cluster_mse, function(x){
+    x[2,is.na(x[2,])] = 0
+    min(x[1,]-x[2,], na.rm = TRUE)
+  }))-1
+  ,max(sapply(res$cluster_mse, function(x){
+    x[2,is.na(x[2,])] = 0
+    max(colSums(x), na.rm = TRUE)
+  }))+1)
+  xaxi = pretty(time_points)
+  # yaxi = pretty(yrange)
+  
+  junk <- dipsaus::iapply(res$cluster_mse,function(x, cl_idx){
+    # x = res$cluster_mse[[1]]
+    # cl_idx = 1
+    # time_points = preload_info$time_points
+    cl_mean = x[1,]
+    cl_sd = x[2,]
+    
+    #time_columns = names(res$indata)
+    time_columns = res$time_columns
+    
+    # case 1 variable y-lim
+    yrange = range(cl_mean, cl_mean+cl_sd, cl_mean-cl_sd, na.rm = TRUE)
+    # case 2 fixed yrange for all plots
+    rutabaga::plot_clean(time_points, ylim=yrange) ##FIXME
+    
+    
+    #gnames = NULL
+    #j=1
+    cols = seq_len(n_cond_groups)
+    lapply(seq_len(n_cond_groups), function(j){
+      
+      sel = stringr::str_ends(time_columns, paste0('_', j))
+      time = as.numeric(stringr::str_extract(time_columns[sel], '^[^_]+'))
+      
+      rutabaga::ebar_polygon(time, cl_mean[sel], sem = cl_sd[sel], col = cols[[j]])
+    })
+    
+    # gc <- mapply(function(sub_x,ii){
+    #   lines(time_points, sub_x, col =ii)
+    #   cols <- c(cols,ii)
+    #   gnames <- c(gnames,input$input_groups[[ii]]$group_name)
+    #   print(input$input_groups[[ii]]$group_name)
+    #   return(list(gnames = gnames, cols = cols))
+    # }, x, seq_along(input$input_groups))
+    yaxi = pretty(yrange)
+    rutabaga::ruta_axis(1, xaxi)
+    rutabaga::ruta_axis(2, yaxi)#,labels = if(separate){}else{local_data$analysis_data_raw$headers[3]})
+    legend('topright', group_names, bty='n', text.font = 2, text.col = cols)
+    ravebuiltins:::rave_title(
+      sprintf(
+        '%s%d (n=%d)',
+        'Cluster',
+        cl_idx,
+        sum(res$clusters_res == cl_idx)
+      ),
+      col = res$colors[cl_idx],
+      cex = cex.main
+    ) 
+  }
+  )
+  
 }
 
 # cluster_plot1 <- function(){

@@ -48,6 +48,9 @@ clustering_analysis <- function(){
   #input = ...input
   raw_table = local_data$analysis_data_raw$data
   
+  #var_name = names(raw_table)[3]
+  var_name = input$trial_selected
+  
   collapsed = lapply(seq_along(input$input_groups), function( ii ){
     group = input$input_groups[[ ii ]]
     group_name = group$group_name
@@ -67,7 +70,7 @@ clustering_analysis <- function(){
     collapsed_mean = reshape2::dcast(
       sub,
       Subject + Electrode ~ Time, 
-      fun.aggregate = mean, value.var = 'Power'
+      fun.aggregate = mean, value.var = var_name
     )
     
     # collapsed_var = reshape2::dcast(

@@ -101,8 +101,20 @@ define_input(
 )
 
 define_input(
-  definition = sliderInput(inputId = 'time_window', label = 'Time Window', min = -1, max= 2,
-                           value = c(0,1.0),step = 0.01)
+  definition = sliderInput(inputId = 'time_window', label = 'Time Window', 
+                min = -1, 
+                max= 2,
+                value = c(0,1.0),
+                step = 0.01)
+  # }else{
+  #   sliderInput(inputId = 'time_window', label = 'Time Window', 
+  #               min = min(local_data$analysis_data_raw$data$Time), 
+  #               max= max(local_data$analysis_data_raw$data$Time),
+  #               value = c(0,1.0),
+  #               step = 0.01)
+  # }
+
+
 )
 
 define_input(
@@ -124,14 +136,31 @@ define_input(
 )
 
 define_input(
+  definition = selectInput(inputId = 'trial_selected', label = 'Select trial',
+                           choices = c( "Pct_Change_Power_Trial_Onset","Pct_Change_Power_1stWord",
+                                        "Pct_Change_Power_2ndWord","Pct_Change_Power_3rdWord",
+                                        "Pct_Change_Power_4thWord","Pct_Change_Power_5thWord",
+                                        "Pct_Change_Power_Offset"),selected = NULL),
+  init_args = c('selected'),
+  init_expr = {
+    selected = cache_input('trial_selected', 'Pct_Change_Power_Trial_Onset')
+  }
+)
+define_input(
   definition = checkboxInput(inputId = 'op_run', label = 'Optimal Number of Clusters Analysis',
                              value = FALSE)
   )
 
 
 define_input(
-  definition = actionButton('do_run', 'Run Analysis')
+  definition = dipsaus::actionButtonStyled('do_run', 'Run Analysis',
+                                           type = 'primary', width = '100%')
 )
+
+define_input(
+  definition = customizedUI('graph_export')
+)
+
 
 input_layout = list(
   'Data Import' = list(
@@ -144,18 +173,20 @@ input_layout = list(
   ),
   'Analysis Settings' = list(
     c( 'input_method', 'input_nclusters' ),
+    'trial_selected',
     'time_window',
     'distance_method',
-    'check_scale',
     'mds_distance_method',
-    'op_run'
-  ),
-  'Model Running' = list(
+    c('check_scale',
+    'op_run'),
     'do_run'
+  ),
+  'Export Settings' = list(
+    'graph_export'
   )
 )
 
-manual_inputs = c('analysis_data', 'input_baseline_range', 
+manual_inputs = c('graph_export','analysis_data', 'input_baseline_range', 
                   # 'text_electrode', 
                   'input_frequencies', 'input_groups', 'input_nclusters',
                   'input_method', unlist(sapply(1:20, function(ii){ paste0('input_groups_', c('group_name', 'group_conditions'), '_', ii) })))
