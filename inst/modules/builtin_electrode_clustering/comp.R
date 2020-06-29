@@ -137,14 +137,7 @@ define_input(
 
 define_input(
   definition = selectInput(inputId = 'trial_selected', label = 'Select trial',
-                           choices = c( "Pct_Change_Power_Trial_Onset","Pct_Change_Power_1stWord",
-                                        "Pct_Change_Power_2ndWord","Pct_Change_Power_3rdWord",
-                                        "Pct_Change_Power_4thWord","Pct_Change_Power_5thWord",
-                                        "Pct_Change_Power_Offset"),selected = NULL),
-  init_args = c('selected'),
-  init_expr = {
-    selected = cache_input('trial_selected', 'Pct_Change_Power_Trial_Onset')
-  }
+                           choices = '', selected = NULL)
 )
 define_input(
   definition = checkboxInput(inputId = 'op_run', label = 'Optimal Number of Clusters Analysis',

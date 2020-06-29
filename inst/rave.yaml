@@ -1,6 +1,6 @@
 package_name: raveclusters
 dev_subject:
-  project_name: demo
+  project_name: Sentences
   subject_code: YAB
   electrodes: '14,15'
   epoch: YABaOutlier

@@ -18,8 +18,8 @@ graph_export = function(){
 output$export_pdf <- downloadHandler(
   filename = function(){
     paste0(
-      paste(unique(...local_data$analysis_data_raw$subject), collapse = "_"),
-      '_', ...input$input_nclusters,'_',...input$input_method,'_',
+      paste(unique(local_data$analysis_data_raw$subject), collapse = "_"),
+      '_', input$input_nclusters,'_',input$input_method,'_',
       format(Sys.time(), "%b_%d_%Y_%H_%M_%S"), '.pdf')
   },
   content = function(file){
@@ -71,7 +71,7 @@ mds_plot <- function(){
        col = res$colors[res$clusters_res])
   # legend('topright', sprintf('Cluster %d', seq_along(unique(res$clusters_res)),
   #                            bty='n', text.font = 2, text.col = res$colors[seq_along(unique(res$clusters_res))]))
-  ravebuiltins:::rave_title(sprintf('%d %s %d %s',
+  ravebuiltins:::.rave_title(sprintf('%d %s %d %s',
                                     length(res$collapsed$Electrode),
                                     'electrodes across',
                                     length(unique(res$collapsed$Subject)),
@@ -118,7 +118,7 @@ dendrogram_plot <- function() {
   par(mfrow = c(1,1))
   rave::set_rave_theme()
   plot(stats::dendrapply(as.dendrogram(local_data$cluster_method_output), leafCol),las = 1) 
-  ravebuiltins:::rave_title(sprintf('%s %d %s %d %s','Hierarchical clustering of',
+  ravebuiltins:::.rave_title(sprintf('%s %d %s %d %s','Hierarchical clustering of',
                                     length(res$collapsed$Electrode), 
                                     'electrodes across',
                                     length(unique(res$collapsed$Subject)),'patients'))
@@ -164,7 +164,7 @@ optimal_cluster_number_plot <- function(){
 
 cluster_plot <-  function(separate = FALSE, cex.main = shiny_cex.main){
   
-  palette(ravebuiltins:::rave_colors$GROUP)
+  palette(ravebuiltins::get_palette("Beautiful Field"))
   
   res <- local_data$my_results
   
@@ -242,7 +242,7 @@ cluster_plot <-  function(separate = FALSE, cex.main = shiny_cex.main){
     rutabaga::ruta_axis(1, xaxi)
     rutabaga::ruta_axis(2, yaxi)#,labels = if(separate){}else{local_data$analysis_data_raw$headers[3]})
     legend('topright', group_names, bty='n', text.font = 2, text.col = cols)
-    ravebuiltins:::rave_title(
+    ravebuiltins:::.rave_title(
       sprintf(
         '%s%d (n=%d)',
         'Cluster',

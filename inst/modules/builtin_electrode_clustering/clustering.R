@@ -212,7 +212,7 @@ clustering_analysis <- function(){
   })
   
   #color pattern
-  colors = rainbow(length(unique(clusters)))
+  colors = ravebuiltins::get_palette("Dark2")
    
   names(colors)=unique(clusters)
   

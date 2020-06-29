@@ -340,7 +340,7 @@ define_input_time <- function(inputId, label = 'Time Range', is_range = TRUE, ro
 
 
 define_input_condition_groups <- function(
-  inputId, label = 'Group', initial_groups = 1, max_group = 10, min_group = 1,
+  inputId, label = 'Group', initial_groups = 1, max_group = 10, min_group = 1, multiple = TRUE, 
   label_color = rep('black', max_group), init_args, init_expr, quoted = FALSE, ...
 ){
   # get_from_package('registerCompoundInput2', 'dipsaus', internal = TRUE)()
@@ -383,7 +383,7 @@ define_input_condition_groups <- function(
         inputId = !!inputId, label = !!label, inital_ncomp = !!initial_groups, 
         components = htmltools::div(
           textInput('group_name', 'Name', value = '', placeholder = 'Condition Name'),
-          selectInput('group_conditions', ' ', choices = '', multiple = TRUE)
+          selectInput('group_conditions', ' ', choices = '', multiple = !!multiple)
         ),
         label_color = !!label_color, max_ncomp = !!max_group, min_group = !!min_group
       ),
@@ -442,11 +442,11 @@ define_input_analysis_data_csv <- function(
           class = 'rave-grid-inputs',
           htmltools::div(
             style = 'flex-basis: 100%; min-height: 80px;',
-            selectInput(inputId = ns(!!input_selector), label = !!label, choices = choices, selected = character(0), multiple = !!multiple)
+            selectInput(inputId = ns(!!input_selector), label = !!label, choices = choices, selected = choices[1], multiple = !!multiple)
           ),
           htmltools::div(
             style = 'flex-basis: 100%',
-            actionButtonStyled(inputId = ns(!!input_btn), label = 'Load analysis data', width = '100%', type = 'primary')
+            actionButtonStyled(inputId = ns(!!input_btn), label = 'Load selected data', width = '100%', type = 'primary')
           ),
           uploader_tag
         )
@@ -505,6 +505,7 @@ define_input_analysis_data_csv <- function(
           path = input[[!!input_uploader]]$datapath
           group_analysis_src = .local_data$group_analysis_src
           tryCatch({
+            print('Observe input_uploader')
             # try to load as csv, check column names
             dat = read.csv(path, header = TRUE, nrows = 10)
             if(all(csv_headers %in% names(dat))){
@@ -528,6 +529,7 @@ define_input_analysis_data_csv <- function(
         }, event.env = .env, handler.env = .env)
         
         observeEvent(input[[!!input_btn]], {
+          print('Observe input_btn')
           source_files = input[[!!input_selector]]
           search_paths = .local_data$search_paths
           progress = rave::progress('Loading analysis', max = length(source_files) + 1)
@@ -550,7 +552,10 @@ define_input_analysis_data_csv <- function(
           # Read all data
           project_name = subject$project_name
           tbls = dipsaus::drop_nulls(lapply(metas, function(x){
-            progress$inc('Loading...')
+            
+            print('trying to load ' %&% x$fpath)
+            
+            progress$inc('Loading...' %&% x$fpath)
             tbl = data.table::fread(file = x$fpath, stringsAsFactors = FALSE, header = TRUE)
             tbl = tbl[tbl$Project %in% project_name, ]
             if(!nrow(tbl)){
@@ -569,7 +574,7 @@ define_input_analysis_data_csv <- function(
                 conf = yaml::read_yaml(yaml_path)
               }
             }
-            
+            print('returning loaded data ')
             return(list(
               data = tbl,
               conf = conf,
@@ -619,7 +624,6 @@ define_input_analysis_data_csv <- function(
   parent_frame = parent.frame()
   eval_dirty(quo, env = parent_frame)
 }
-
 
 
 
