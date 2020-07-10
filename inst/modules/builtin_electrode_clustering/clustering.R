@@ -51,49 +51,48 @@ clustering_analysis <- function(){
   #var_name = names(raw_table)[3]
   var_name = input$trial_selected
   
+  # subset with only the selected ROI variable
+  roi_list <- c("VAR_IS_ROI_Hemisphere", "VAR_IS_ROI_freesurferlabel", "VAR_IS_ROI_Group")
+  roi_var<- paste0('VAR_IS_ROI_',input$model_roi_variable)
+
+  raw_table = raw_table[, !names(raw_table) %in% roi_list[!roi_list %in% roi_var]]
+
+  #select based on the ROI selector
+  use_regex <- ( input$roi_ignore_gyrus_sulcus || input$roi_ignore_hemisphere )
+  
+  raw_table <- table_apply_roi(table = raw_table, roi_column = roi_var, roi = input$filter_by_roi, use_regex = use_regex)
+  
+
   collapsed = lapply(seq_along(input$input_groups), function( ii ){
+    
     group = input$input_groups[[ ii ]]
+    
     group_name = group$group_name
+    
     if(is.null(group_name) && group_name == ''){
       group_name = sprintf('Group %d', ii)
     }
+    
     group_condition = group$group_conditions
-    # collapsed_data = rutabaga::do_aggregate(data = dat[dat$Condition %in% group$conditions, ], 
-    #                                         Power ~ Subject + Electrode + Time, FUN = mean)
-    # collapsed_data$ConditionGroup = group$condition_name
-    # collapsed_data
+
     print('afaljfl')
     
     sub = raw_table[raw_table$Condition %in% group_condition 
                                             & raw_table$Time %within% input$time_window, ]
+    
     sub$Time = paste0(sub$Time, '_', ii)
+    
+    fml <- Subject + Electrode + VAR_IS_ROI_freesurferlabel ~ Time
+    fml[[2]][[3]] <- parse(text = roi_var)[[1]]
+      
     collapsed_mean = reshape2::dcast(
       sub,
-      Subject + Electrode ~ Time, 
+      fml, #FIXME
       fun.aggregate = mean, value.var = var_name
     )
-    
-    # collapsed_var = reshape2::dcast(
-    #   sub,
-    #   Subject + Electrode ~ Time, 
-    #   fun.aggregate = function(x){
-    #     var(x, na.rm = TRUE) / sqrt(sum(!is.na(x)))
-    #   }, value.var = 'Power'
-    # )
-    # collapsed_df = reshape2::dcast(
-    #   sub,
-    #   Subject + Electrode ~ Time, 
-    #   fun.aggregate = function(x){
-    #     sum(!is.na(x))
-    #   }, value.var = 'Power'
-    # )
-    # collapsed_mean$ConditionGroup = group_name
-    
-    
+
     return(list(
       collapsed_mean = collapsed_mean,
-      # collapsed_var = collapsed_var,
-      # collapsed_df = collapsed_df,
       group_name = group_name,
       group_index = ii
     ))
@@ -103,10 +102,6 @@ clustering_analysis <- function(){
   # merge(..., all=TRUE) will keep all the IDs, FALSE will be inner join
   merged = Reduce(function(a, b){
     list(
-      # collapsed_var = merge(a$collapsed_var, b$collapsed_var, all = FALSE, 
-      #                       by = c("Subject", 'Electrode')),
-      # collapsed_df = merge(a$collapsed_df, b$collapsed_df, all = FALSE, 
-      #                       by = c("Subject", 'Electrode')),
       collapsed_mean = merge(a$collapsed_mean, b$collapsed_mean, all = FALSE, 
                              by = c("Subject", 'Electrode'))
     )
@@ -125,9 +120,7 @@ clustering_analysis <- function(){
   #' dd
   #' @noRd
   
-  #collapsed = do.call('cbind', collapsed)
-  # numerical data without subject and electrode names
-  indata = collapsed[, !names(collapsed) %in% c('Subject', 'Electrode')]
+  indata = collapsed[, !names(collapsed) %in% c('Subject', 'Electrode', roi_var)]
   # baselined = baseline(
   #   power$subset(
   #     Trial=Trial %in% all_trials, Frequency = Frequency %within% input_frequencies,
@@ -152,12 +145,8 @@ clustering_analysis <- function(){
   # list2env(as.list(..param_env), envir = globalenv())
   # list2env(as.list(environment()), envir = globalenv())
   
-  
-  #set.seed(123)
-  
-  #z-scoring
   time_columns = names(indata)
-  #indata = t(scale(t(indata)))#FIXME
+
   
   #MDS
   if( ncol(indata) <= 2 ){
@@ -227,12 +216,15 @@ clustering_analysis <- function(){
   cluster_table = collapsed[,1:2]
   cluster_table$Cluster = clusters
   
+  roi = collapsed[,3]
+  
   return(list(
     collapsed = collapsed,
     indata = indata,#FIXME
     mds_res = mds_res,
     clusters_res = clusters,
     cluster_table = cluster_table,
+    roi = roi,
     cluster_mse =  cluster_mse,
     input_nclusters = input$input_nclusters,
     #time_points = as.numeric(names(indata)),

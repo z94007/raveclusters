@@ -22,6 +22,8 @@ load_scripts(
   get_path('inst/modules/builtin_electrode_clustering/reactives.R'),
   get_path('inst/modules/builtin_electrode_clustering/outputs.R'),
   get_path('inst/modules/builtin_electrode_clustering/clustering.R'),
+  get_path('inst/modules/builtin_electrode_clustering/roi_reactives.R'),
+  get_path('inst/modules/builtin_electrode_clustering/table_apply_roi.R'),
   #get_path('inst/modules/builtin_electrode_clustering/clustering_evaluation.R'),
   asis = TRUE)
 
@@ -44,7 +46,7 @@ load_scripts(
 
 #  ---------------------------------  Inputs -----------------------------------
 
-define_input_analysis_data_csv(
+define_input_analysis_data_fst(
   inputId= 'analysis_data', label = "Data files located in this project's RAVE directory", 
   paths = c('_project_data/group_analysis_lme/source', '_project_data/power_explorer/exports'),
   reactive_target = 'local_data$analysis_data_raw', try_load_yaml = TRUE
@@ -154,6 +156,26 @@ define_input(
   definition = customizedUI('graph_export')
 )
 
+# ---- ROI Inputs ----
+define_input(
+  selectInput('model_roi_variable', 'ROI variable', choices = '', selected = character(0), multiple = FALSE)
+)
+
+define_input(
+  selectInput('filter_by_roi', 'Regions included (add/remove to filter in/out)', choices = '',
+              selected = character(0), multiple = TRUE)
+)
+
+define_input(
+  checkboxInput('roi_ignore_hemisphere', 'Collapse L/R hemisphere', value =FALSE)
+)
+
+define_input(
+  checkboxInput('roi_ignore_gyrus_sulcus', 'Collapse gyrus/sulcus', value = FALSE)
+)
+
+
+
 
 input_layout = list(
   'Data Import' = list(
@@ -166,6 +188,10 @@ input_layout = list(
   ),
   'Analysis Settings' = list(
     c( 'input_method', 'input_nclusters' ),
+    c('model_dependent'),
+    c('model_roi_variable'),
+    c('filter_by_roi'),
+    c('roi_ignore_hemisphere', 'roi_ignore_gyrus_sulcus'),
     'trial_selected',
     'time_window',
     'distance_method',
@@ -179,10 +205,13 @@ input_layout = list(
   )
 )
 
-manual_inputs = c('graph_export','analysis_data', 'input_baseline_range', 
-                  # 'text_electrode', 
-                  'input_frequencies', 'input_groups', 'input_nclusters',
-                  'input_method', unlist(sapply(1:20, function(ii){ paste0('input_groups_', c('group_name', 'group_conditions'), '_', ii) })))
+manual_inputs = c(
+  'graph_export','analysis_data', 'input_baseline_range', 
+  # 'text_electrode', 
+  'input_frequencies', 'input_groups', 'input_nclusters',
+  'input_method', unlist(sapply(1:20, function(ii){ paste0('input_groups_', c('group_name', 'group_conditions'), '_', ii) })),
+  'model_roi_variable', 'filter_by_roi', 'how_to_model_roi', 'roi_ignore_hemisphere', 'roi_ignore_gyrus_sulcus'
+)
 
 # End of input
 # ----------------------------------  Outputs ----------------------------------
@@ -258,6 +287,7 @@ define_output(
 #   plot()
 # }
 # define_output(
+
 #   definition = plotOutput('cluster_plot1'),
 #   title = 'Cluster Visualization',
 #   width = 9,

@@ -7,6 +7,9 @@ local_data %?<-% reactiveValues(
   analysis_data_raw = NULL
 )
 
+RAVE_ROI_KEY = 'VAR_IS_ROI_'
+model_params = dipsaus::fastmap2()
+
 observe({
   dipsaus::cat2('main observe', level='INFO')
   
@@ -64,4 +67,24 @@ observe({
   
   # update response variable -- choices = dvs, with first option selected 
   updateSelectInput(session, 'trial_selected',choices =dvs)
+  
+  
+  
+  # Handle ROI
+  # grab any ROI variables
+  var_roi_avail <- nms[startsWith(nms, RAVE_ROI_KEY)]
+  var_fe_avail <- nms[! nms %in% c(dvs, dnu, var_roi_avail)]
+  
+  var_roi_avail <- stringr::str_remove_all(var_roi_avail, RAVE_ROI_KEY)
+  
+  current_roi_selected = model_params$roi_variable
+  if (!isTRUE(current_roi_selected %in% var_roi_avail)) {
+    print(paste('ROIs available: ', paste0(var_roi_avail, collapse='|')))
+    current_roi_selected = character(0)
+    updateSelectInput(session, 'model_roi_variable', choices = var_roi_avail)
+  }
+  
+  local_data$var_fixed_effects_available = var_fe_avail
+  
+  
 })

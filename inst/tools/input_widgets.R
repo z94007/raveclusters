@@ -626,6 +626,232 @@ define_input_analysis_data_csv <- function(
 }
 
 
+define_input_analysis_data_fst <- function(
+  inputId, label, paths, reactive_target = sprintf('local_data[[%s]]', inputId),
+  multiple = TRUE, label_uploader = '...', try_load_yaml = TRUE, allow_uploader = FALSE){
+  
+  input_ui = inputId
+  input_selector = paste0(inputId, '_source_files')
+  input_uploader = paste0(inputId, '_uploader')
+  input_btn = paste0(inputId, '_btn')
+  input_evt = paste0(inputId, '__register_events')
+  reactive_target = substitute(reactive_target)
+  
+  quo = rlang::quo({
+    define_input(definition = customizedUI(!!input_ui))
+    
+    load_scripts(rlang::quo({
+      ...ravemodule_environment_reserved %?<-% new.env(parent = emptyenv())
+      ...ravemodule_environment_reserved[[!!input_ui]] = new.env(parent = emptyenv())
+      
+      assign(!!input_ui, function(){
+        project_dir = dirname(subject$dirs$subject_dir)
+        search_paths = file.path(project_dir, !!paths)
+        choices = unlist(lapply(search_paths, list.files, pattern = '\\.fst$', ignore.case=TRUE))
+        # Order file names by date-time (descending order)
+        dt = stringr::str_extract(choices, '[0-9]{8}-[0-9]{6}')
+        od = order(strptime(dt, '%Y%m%d-%H%M%S'), decreasing = TRUE)
+        choices = choices[od]
+        
+        uploader_tag = NULL
+        if(!!allow_uploader){
+          uploader_tag = htmltools::div(
+            style = 'flex-basis: 50%; min-height: 80px;',
+            htmltools::tags$label("Upload new files to this project's RAVE directory"),
+            fileInput(inputId = ns(!!input_uploader), label = !!label_uploader, multiple = FALSE, width = '100%')
+          )
+        }
+        
+        # function to render UI
+        htmltools::div(
+          class = 'rave-grid-inputs',
+          htmltools::div(
+            style = 'flex-basis: 100%; min-height: 80px;',
+            selectInput(inputId = ns(!!input_selector), label = !!label, choices = choices, selected = choices[1], multiple = !!multiple)
+          ),
+          htmltools::div(
+            style = 'flex-basis: 100%',
+            actionButtonStyled(inputId = ns(!!input_btn), label = 'Load selected data', width = '100%', type = 'primary')
+          ),
+          uploader_tag
+        )
+      })
+      ...ravemodule_environment_reserved[[!!input_ui]][[!!input_evt]] = function(){
+        .env = environment()
+        .local_data = reactiveValues()
+        
+        is_reactive_context = function(){
+          session = getDefaultReactiveDomain()
+          any(c('ShinySession', 'session_proxy') %in% class(session))
+        }
+        
+        # 1. function to scan source files
+        rescan_source = function(search_paths, update = TRUE, new_selected = NULL){
+          if(!length(search_paths)){
+            return(NULL)
+          }
+          choices = unlist(lapply(search_paths, list.files, pattern = '\\.fst$', ignore.case=TRUE))
+          # Order file names by date-time (descending order)
+          dt = stringr::str_extract(choices, '[0-9]{8}-[0-9]{6}')
+          od = order(strptime(dt, '%Y%m%d-%H%M%S'), decreasing = TRUE)
+          choices = choices[od]
+          
+          if(update && is_reactive_context()){
+            session = getDefaultReactiveDomain()
+            selected = c(shiny::isolate(input[[!!input_selector]]), new_selected)
+            updateSelectInput(session, inputId = !!input_selector, choices = choices, selected = selected)
+          }
+          return(choices)
+        }
+        
+        # 2. Find csv file within directory
+        find_source = function(search_paths, fname){
+          fpaths = file.path(search_paths, fname)
+          fexists = file.exists(fpaths)
+          if(!any(fexists)){ return(NULL) }
+          return(fpaths[which(fexists)[1]])
+        }
+        # 3. Monitor subject change
+        local_reactives = get_execenv_local_reactive()
+        observe({
+          if(monitor_subject_change()){
+            project_dir = dirname(subject$dirs$subject_dir)
+            .local_data$search_paths = search_paths = file.path(project_dir, !!paths)
+            .local_data$group_analysis_src = search_paths[[1]]
+            # Do not change it here because renderui will override update inputs
+            # rescan_source(search_paths, update = TRUE)
+          }
+        }, env = .env, priority = -1)
+        
+        
+        # 3 listen to event to upload file
+        observeEvent(input[[!!input_uploader]], {
+          csv_headers = c('Project', 'Subject', 'Electrode')
+          path = input[[!!input_uploader]]$datapath
+          group_analysis_src = .local_data$group_analysis_src
+          tryCatch({
+            print('Observe input_uploader')
+            # try to load as fst, check column names
+            dat = fst::read_fst(path, from = 1, to = 10)
+            if(all(csv_headers %in% names(dat))){
+              now = strftime(Sys.time(), '-%Y%m%d-%H%M%S(manual).fst')
+              # pass, write to group_analysis_src with name
+              fname = input[[!!input_uploader]]$name
+              fname = stringr::str_replace_all(fname, '[\\W]+', '_')
+              fname = stringr::str_to_lower(fname)
+              fname = stringr::str_replace(fname, '_fst$', now)
+              if(!dir.exists(group_analysis_src)){
+                dir.create(group_analysis_src, recursive = TRUE, showWarnings = FALSE)
+              }
+              file.copy(path, file.path(group_analysis_src, fname), overwrite = TRUE)
+              rescan_source(.local_data$search_paths, new_selected = fname)
+              return()
+            }
+            showNotification(p('The file uploaded does not have enough columns.'), type = 'error')
+          }, error = function(e){
+            showNotification(p('Upload error: ', e), type = 'error')
+          })
+        }, event.env = .env, handler.env = .env)
+        
+        observeEvent(input[[!!input_btn]], {
+          print('Observe input_btn')
+          source_files = input[[!!input_selector]]
+          search_paths = .local_data$search_paths
+          progress = rave::progress('Loading analysis', max = length(source_files) + 1)
+          on.exit({ progress$close() })
+          
+          progress$inc('Checking files...')
+          # find all the source files and get headers
+          metas = lapply(source_files, function(fpath){
+            fpath = find_source(search_paths, fpath)
+            if( is.null(fpath) ){ return(NULL) }
+            dat = dat = fst::read_fst(fpath, from = 1, to = 1)
+            # read.csv( fpath , header = TRUE, nrows = 1)
+            list(
+              fpath = fpath,
+              header = names(dat)
+            )
+          })
+          metas = dipsaus::drop_nulls(metas)
+          headers = unique(unlist(lapply(metas, '[[', 'header')))
+          
+          # Read all data
+          project_name = subject$project_name
+          tbls = dipsaus::drop_nulls(lapply(metas, function(x){
+            
+            print('trying to load ' %&% x$fpath)
+            
+            progress$inc('Loading...' %&% x$fpath)
+            tbl <- fst::read_fst(path = x$fpath)
+            # tbl = data.table::fread(file = x$fpath, stringsAsFactors = FALSE, header = TRUE)
+            tbl = tbl[tbl$Project %in% project_name, ]
+            if(!nrow(tbl)){
+              return(NULL)
+            }
+            mish = headers[!headers %in% names(tbl)]
+            for(m in mish){
+              tbl[[m]] = NA
+            }
+            
+            # Load YAML files
+            conf = NULL
+            if( !!try_load_yaml ){
+              yaml_path = paste0(x$fpath, '.yaml')
+              if(file.exists(yaml_path)){
+                conf = yaml::read_yaml(yaml_path)
+              }
+            }
+            print('returning loaded data ')
+            return(list(
+              data = tbl,
+              conf = conf,
+              path = x$fpath,
+              subject = tbl$Subject[[1]]
+            ))
+          }))
+          
+          res = do.call('rbind', lapply(tbls, '[[', 'data'))
+          
+          if(!is.data.frame(res) || !nrow(res)){
+            res = NULL
+          }else{
+            try({
+              res$Electrode = as.character(res$Electrode)
+              res$Subject = as.character(res$Subject)
+              res$Condition = as.character(res$Condition)
+            }, silent = TRUE)
+            
+            subjects = sapply(tbls, '[[', 'subject')
+            confs = lapply(tbls, '[[', 'conf')
+            names(confs) = subjects
+            
+            res = list(
+              data = res,
+              subjects = subjects,
+              confs = confs,
+              headers = names(res)
+            )
+            
+          }
+          if(is.character(!!reactive_target)){
+            eval(parse(text = sprintf('%s <- res', !!reactive_target)))
+          }else{
+            do.call('<-', list(!!reactive_target, res))
+          }
+          
+        }, event.env = .env, handler.env = .env)
+      }
+      
+      eval_when_ready(function(...){
+        ...ravemodule_environment_reserved[[!!input_ui]][[!!input_evt]]()
+      })
+    }))
+  })
+  
+  parent_frame = parent.frame()
+  eval_dirty(quo, env = parent_frame)
+}
+
 
 define_input_table_filters <- function(
   inputId, label = 'Filter', 

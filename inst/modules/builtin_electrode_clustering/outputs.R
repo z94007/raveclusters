@@ -71,7 +71,7 @@ mds_plot <- function(){
        col = res$colors[res$clusters_res])
   # legend('topright', sprintf('Cluster %d', seq_along(unique(res$clusters_res)),
   #                            bty='n', text.font = 2, text.col = res$colors[seq_along(unique(res$clusters_res))]))
-  ravebuiltins:::.rave_title(sprintf('%d %s %d %s',
+  ravebuiltins:::rave_title(sprintf('%d %s %d %s',
                                     length(res$collapsed$Electrode),
                                     'electrodes across',
                                     length(unique(res$collapsed$Subject)),
@@ -118,7 +118,7 @@ dendrogram_plot <- function() {
   par(mfrow = c(1,1))
   rave::set_rave_theme()
   plot(stats::dendrapply(as.dendrogram(local_data$cluster_method_output), leafCol),las = 1) 
-  ravebuiltins:::.rave_title(sprintf('%s %d %s %d %s','Hierarchical clustering of',
+  ravebuiltins:::rave_title(sprintf('%s %d %s %d %s','Hierarchical clustering of',
                                     length(res$collapsed$Electrode), 
                                     'electrodes across',
                                     length(unique(res$collapsed$Subject)),'patients'))
@@ -242,7 +242,7 @@ cluster_plot <-  function(separate = FALSE, cex.main = shiny_cex.main){
     rutabaga::ruta_axis(1, xaxi)
     rutabaga::ruta_axis(2, yaxi)#,labels = if(separate){}else{local_data$analysis_data_raw$headers[3]})
     legend('topright', group_names, bty='n', text.font = 2, text.col = cols)
-    ravebuiltins:::.rave_title(
+    ravebuiltins:::rave_title(
       sprintf(
         '%s%d (n=%d)',
         'Cluster',
@@ -286,9 +286,14 @@ viewer_3d_fun <- function(...){
   tbl = res$cluster_table
   tbl$Cluster = paste('Cluster', tbl$Cluster)
   tbl$Project = project_name
+
+  shiny::validate(
+    shiny::need(is.data.frame(tbl), message = 'Please import data and run analysis')
+  )
   
-  if(!is.data.frame(tbl)){
-    return(NULL)
+  roi_varname <- isolate(input$model_roi_variable)
+  if(length(roi_varname) == 1){
+    tbl[[roi_varname]] = res$roi
   }
   
   bs = lapply(subjects, function(sub){
@@ -301,6 +306,7 @@ viewer_3d_fun <- function(...){
   brain$plot(side_width = 160, side_shift = c(0,0), 
              palettes = list('Cluster' = res$colors))
 }
+
 
 # cluster_plot2 <- function(){
 #   res <- local_data$my_results
