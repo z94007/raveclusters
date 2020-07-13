@@ -46,7 +46,7 @@ clustering_analysis <- function(){
   #local_data = ...local_data
   #input_groups = ...input$input_groups
   #input = ...input
-  raw_table = local_data$analysis_data_raw$data
+  raw_table = ...local_data$analysis_data_raw$data
   
   #var_name = names(raw_table)[3]
   var_name = input$trial_selected
@@ -103,7 +103,7 @@ clustering_analysis <- function(){
   merged = Reduce(function(a, b){
     list(
       collapsed_mean = merge(a$collapsed_mean, b$collapsed_mean, all = FALSE, 
-                             by = c("Subject", 'Electrode'))
+                             by = c("Subject", 'Electrode',roi_var))
     )
   }, collapsed)
   collapsed = merged$collapsed_mean
