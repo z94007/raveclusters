@@ -46,7 +46,8 @@ clustering_analysis <- function(){
   #local_data = ...local_data
   #input_groups = ...input$input_groups
   #input = ...input
-  raw_table = ...local_data$analysis_data_raw$data
+  raw_table <- local_data$analysis_data_raw$data
+  
   
   #var_name = names(raw_table)[3]
   var_name = input$trial_selected
@@ -54,7 +55,7 @@ clustering_analysis <- function(){
   # subset with only the selected ROI variable
   roi_list <- c("VAR_IS_ROI_Hemisphere", "VAR_IS_ROI_freesurferlabel", "VAR_IS_ROI_Group")
   roi_var<- paste0('VAR_IS_ROI_',input$model_roi_variable)
-
+  
   raw_table = raw_table[, !names(raw_table) %in% roi_list[!roi_list %in% roi_var]]
 
   #select based on the ROI selector
@@ -201,7 +202,9 @@ clustering_analysis <- function(){
   })
   
   #color pattern
+  #FIXME
   colors = ravebuiltins::get_palette("Dark2")
+   
    
   names(colors)=unique(clusters)
   
