@@ -177,9 +177,9 @@ cluster_plot <-  function(separate = FALSE, cex.main = shiny_cex.main){
     
   } else {
     if( nclust <= 4 ){
-      par(mfrow = c(1, nclust))
+      par(mfrow = c(1, nclus*2))
     }else{
-      nrow = ceiling((nclust) / 4)
+      nrow = ceiling((nclust*2) / 4)
       par(mfrow = c(nrow, 4))
     }
     par(mar = c(2,4.1, 4.1, 2))
