@@ -190,8 +190,10 @@ cluster_plot <-  function(separate = FALSE, cex.main = shiny_cex.main){
   time_points =  unique(local_data$analysis_data_raw$data$Time[local_data$analysis_data_raw$data$Time 
                                                                %within% res$time_range])
   n_timepoints = length(time_points)
+  
   group_names = res$group_names
   n_cond_groups = length(group_names)
+  
   var_name = input$trial_selected
   n_var = length(var_name)
   #res
@@ -219,25 +221,27 @@ cluster_plot <-  function(separate = FALSE, cex.main = shiny_cex.main){
     # case 1 variable y-lim
     yrange = range(cl_mean, cl_mean+cl_sd, cl_mean-cl_sd, na.rm = TRUE)
     # case 2 fixed yrange for all plots
-    rutabaga::plot_clean(time_points, ylim=yrange) ##FIXME
+    #rutabaga::plot_clean(time_points, ylim=yrange) ##FIXME
     
     
     #gnames = NULL
     #j=1
     a <- c('x','y','z')
     cols = seq_len(n_cond_groups)
-    lapply(seq_len(n_cond_groups), function(j){
+    lapply(seq_len(n_var), function(i){
       #FIXME
-      lapply(seq_len(n_var), function(i){      
+      rutabaga::plot_clean(time_points, ylim=yrange)
+      lapply(seq_len(n_cond_groups), function(j){
+        
         sel = stringr::str_ends(time_columns, paste0('_', j,'.',a[i]))
+        
         time = as.numeric(stringr::str_extract(time_columns[sel], '^[^_]+'))
         time <- sort(time)
-      
-      rutabaga::ebar_polygon(time, cl_mean[sel], sem = cl_sd[sel], col = cols[[j]])
-      ravebuiltins:::rave_title(var_name[i])})
-      
-
-    })
+        
+        rutabaga::ebar_polygon(time, cl_mean[sel], sem = cl_sd[sel], col = cols[[j]])
+      })
+      legend('topleft', var_name[i], bty='n', text.font = 2,cex = 1.25)
+    
     
     # gc <- mapply(function(sub_x,ii){
     #   lines(time_points, sub_x, col =ii)
@@ -246,22 +250,22 @@ cluster_plot <-  function(separate = FALSE, cex.main = shiny_cex.main){
     #   print(input$input_groups[[ii]]$group_name)
     #   return(list(gnames = gnames, cols = cols))
     # }, x, seq_along(input$input_groups))
-    yaxi = pretty(yrange)
-    rutabaga::ruta_axis(1, xaxi)
-    rutabaga::ruta_axis(2, yaxi)#,labels = if(separate){}else{local_data$analysis_data_raw$headers[3]})
-    legend('topright', group_names, bty='n', text.font = 2, text.col = cols)
-    ravebuiltins:::rave_title(
-      sprintf(
-        '%s%d (n=%d)',
-        'Cluster',
-        cl_idx,
-        sum(res$clusters_res == cl_idx)
-      ),
-      col = res$colors[cl_idx],
-      cex = cex.main
-    ) 
-  }
-  )
+      yaxi = pretty(yrange)
+      rutabaga::ruta_axis(1, xaxi)
+      rutabaga::ruta_axis(2, yaxi)#,labels = if(separate){}else{local_data$analysis_data_raw$headers[3]})
+      legend('topright', group_names, bty='n', text.font = 2, text.col = cols)
+      ravebuiltins:::rave_title(
+        sprintf(
+          '%s%d (n=%d)',
+          'Cluster',
+          cl_idx,
+          sum(res$clusters_res == cl_idx)
+        ),
+        col = res$colors[cl_idx],
+        cex = cex.main
+      )
+    })
+  })
   
 }
 
