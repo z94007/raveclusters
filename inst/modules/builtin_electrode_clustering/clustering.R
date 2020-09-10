@@ -44,7 +44,6 @@ observeEvent(input$do_run, {
 clustering_analysis <- function(){
   # Get data
   #local_data = ...local_data
-  #input_groups = ...input$input_groups
   #input = ...input
   raw_table <- local_data$analysis_data_raw$data
   
@@ -76,7 +75,7 @@ clustering_analysis <- function(){
     
     group_condition = group$group_conditions
 
-    print('afaljfl')
+    print('start data deformation...')
     
     sub = raw_table[raw_table$Condition %in% group_condition 
                                             & raw_table$Time %within% input$time_window, ]
@@ -85,28 +84,43 @@ clustering_analysis <- function(){
     
     fml <- Subject + Electrode + VAR_IS_ROI_freesurferlabel ~ Time
     fml[[2]][[3]] <- parse(text = roi_var)[[1]]
+    
       
-    collapsed_mean = reshape2::dcast(
-      sub,
-      fml, #FIXME
-      fun.aggregate = mean, value.var = var_name
-    )
+   #FIXME
+    collapsed_mean <- lapply(var_name, function(var){
+      reshape2::dcast(
+          sub,
+          fml,
+          fun.aggregate = mean, value.var = var
+        )
+    })
+    
+    merged <- Reduce(function(a, b){
+      # b <- collapsed[[1]]
+      merge(a, b, all = FALSE, 
+            by = c("Subject", 'Electrode',roi_var))
+    }, collapsed_mean)
+    
+
+ 
+
 
     return(list(
-      collapsed_mean = collapsed_mean,
+      collapsed_mean = merged,
       group_name = group_name,
       group_index = ii
     ))
   })
   
-  group_names = sapply(collapsed, '[[', 'group_name')
+  group_names = sapply(collapsed, '[[', 'group_name')#FIXME
   # merge(..., all=TRUE) will keep all the IDs, FALSE will be inner join
   merged = Reduce(function(a, b){
+    # b <- collapsed[[1]]
     list(
       collapsed_mean = merge(a$collapsed_mean, b$collapsed_mean, all = FALSE, 
                              by = c("Subject", 'Electrode',roi_var))
     )
-  }, collapsed)
+  }, collapsed, right = FALSE)
   collapsed = merged$collapsed_mean
   
   ## For merge(..., all=TRUE), there might be some cases where 

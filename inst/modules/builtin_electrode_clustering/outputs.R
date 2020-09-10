@@ -192,6 +192,8 @@ cluster_plot <-  function(separate = FALSE, cex.main = shiny_cex.main){
   n_timepoints = length(time_points)
   group_names = res$group_names
   n_cond_groups = length(group_names)
+  var_name = input$trial_selected
+  n_var = length(var_name)
   #res
   yrange = c(min(sapply(res$cluster_mse, function(x){
     x[2,is.na(x[2,])] = 0
@@ -222,14 +224,18 @@ cluster_plot <-  function(separate = FALSE, cex.main = shiny_cex.main){
     
     #gnames = NULL
     #j=1
+    a <- c('x','y','z')
     cols = seq_len(n_cond_groups)
     lapply(seq_len(n_cond_groups), function(j){
+      #FIXME
+      lapply(seq_len(n_var), function(i){      
+        sel = stringr::str_ends(time_columns, paste0('_', j,'.',a[i]))
+        time = as.numeric(stringr::str_extract(time_columns[sel], '^[^_]+'))
+        time <- sort(time)
       
-      sel = stringr::str_ends(time_columns, paste0('_', j))
-      time = as.numeric(stringr::str_extract(time_columns[sel], '^[^_]+'))
-      time <- sort(time)
-      
-      rutabaga::ebar_polygon(time, cl_mean[sel], sem = cl_sd[sel], col = cols[[j]])
+      rutabaga::ebar_polygon(time, cl_mean[sel], sem = cl_sd[sel], col = cols[[j]])})
+      ravebuiltins:::rave_title(var_name[i])
+
     })
     
     # gc <- mapply(function(sub_x,ii){

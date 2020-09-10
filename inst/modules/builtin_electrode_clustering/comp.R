@@ -138,8 +138,8 @@ define_input(
 )
 
 define_input(
-  definition = selectInput(inputId = 'trial_selected', label = 'Select trial',
-                           choices = '', selected = NULL)
+  definition = selectInput(inputId = 'trial_selected', label = 'Select events',
+                           choices = '', selected = NULL,multiple = TRUE)
 )
 define_input(
   definition = checkboxInput(inputId = 'op_run', label = 'Optimal Number of Clusters Analysis',
