@@ -233,8 +233,9 @@ cluster_plot <-  function(separate = FALSE, cex.main = shiny_cex.main){
         time = as.numeric(stringr::str_extract(time_columns[sel], '^[^_]+'))
         time <- sort(time)
       
-      rutabaga::ebar_polygon(time, cl_mean[sel], sem = cl_sd[sel], col = cols[[j]])})
-      ravebuiltins:::rave_title(var_name[i])
+      rutabaga::ebar_polygon(time, cl_mean[sel], sem = cl_sd[sel], col = cols[[j]])
+      ravebuiltins:::rave_title(var_name[i])})
+      
 
     })
     
