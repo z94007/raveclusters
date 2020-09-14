@@ -176,7 +176,7 @@ cluster_plot <-  function(separate = FALSE, cex.main = shiny_cex.main){
   if( separate ){
     
   } else {
-    if( nclust <= 4 ){
+    if( nclust <= 2 ){
       par(mfrow = c(1, nclust*2))
     }else{
       nrow = ceiling((nclust*2) / 4)
@@ -186,7 +186,7 @@ cluster_plot <-  function(separate = FALSE, cex.main = shiny_cex.main){
   }
   
   
-  #local_data = ...local_data
+  
   time_points =  unique(local_data$analysis_data_raw$data$Time[local_data$analysis_data_raw$data$Time 
                                                                %within% res$time_range])
   n_timepoints = length(time_points)
@@ -206,7 +206,7 @@ cluster_plot <-  function(separate = FALSE, cex.main = shiny_cex.main){
     max(colSums(x), na.rm = TRUE)
   }))+1)
   xaxi = pretty(time_points)
-  # yaxi = pretty(yrange)
+  yaxi = pretty(yrange)
   
   junk <- dipsaus::iapply(res$cluster_mse,function(x, cl_idx){
     # x = res$cluster_mse[[1]]
@@ -219,7 +219,7 @@ cluster_plot <-  function(separate = FALSE, cex.main = shiny_cex.main){
     time_columns = res$time_columns
     
     # case 1 variable y-lim
-    yrange = range(cl_mean, cl_mean+cl_sd, cl_mean-cl_sd, na.rm = TRUE)
+    #FIXME#yrange = range(cl_mean, cl_mean+cl_sd, cl_mean-cl_sd, na.rm = TRUE)#keep it?
     # case 2 fixed yrange for all plots
     #rutabaga::plot_clean(time_points, ylim=yrange) ##FIXME
     
@@ -228,11 +228,20 @@ cluster_plot <-  function(separate = FALSE, cex.main = shiny_cex.main){
     #j=1
     a <- c('x','y','z')
     cols = seq_len(n_cond_groups)
+
+    
+   
+    
     lapply(seq_len(n_var), function(i){
-      #FIXME
+      
       rutabaga::plot_clean(time_points, ylim=yrange)
+      
       lapply(seq_len(n_cond_groups), function(j){
         
+        if (i ==1 && j == 1) {
+          yaxi = pretty(yrange)
+          rutabaga::ruta_axis(2, yaxi)
+        }
         sel = stringr::str_ends(time_columns, paste0('_', j,'.',a[i]))
         
         time = as.numeric(stringr::str_extract(time_columns[sel], '^[^_]+'))
@@ -250,9 +259,9 @@ cluster_plot <-  function(separate = FALSE, cex.main = shiny_cex.main){
     #   print(input$input_groups[[ii]]$group_name)
     #   return(list(gnames = gnames, cols = cols))
     # }, x, seq_along(input$input_groups))
-      yaxi = pretty(yrange)
+      
       rutabaga::ruta_axis(1, xaxi)
-      rutabaga::ruta_axis(2, yaxi)#,labels = if(separate){}else{local_data$analysis_data_raw$headers[3]})
+      #,labels = if(separate){}else{local_data$analysis_data_raw$headers[3]})
       legend('topright', group_names, bty='n', text.font = 2, text.col = cols)
       ravebuiltins:::rave_title(
         sprintf(
