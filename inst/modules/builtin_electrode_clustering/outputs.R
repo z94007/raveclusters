@@ -211,6 +211,7 @@ cluster_plot <-  function(separate = FALSE, cex.main = shiny_cex.main){
   xaxi = pretty(time_points)
   yaxi = pretty(yrange)
   
+  
   cache <- dipsaus::iapply(res$cluster_mse,function(x, cl_idx){
     # x = res$cluster_mse[[1]]
     # cl_idx = 1
@@ -229,7 +230,7 @@ cluster_plot <-  function(separate = FALSE, cex.main = shiny_cex.main){
     
     #gnames = NULL
     #j=1
-    a <- c('x','y','z')
+    #a <- c('x','y','z')
     cols = seq_len(n_cond_groups)
 
     rutabaga::plot_clean(1:(n_timepoints*n_var), ylim=yrange)
@@ -243,13 +244,19 @@ cluster_plot <-  function(separate = FALSE, cex.main = shiny_cex.main){
       #time <- sort(time)
       
       rutabaga::ebar_polygon(1:sum(sel), cl_mean[sel], sem = cl_sd[sel], col = cols[[j]])
+      
     })
     
     abline(v = n_timepoints, lty = 2,col = "gray")
     
     lapply(seq_len(n_var), function(i){
-      legend(x = (i-1)*n_timepoints,y = yrange[2], var_name[i], bty='n', text.font = 2,cex = 1)
+      
+      legend(x = (i-1)*n_timepoints,y = yrange[2], var_name[i], bty='n', text.font = 2,cex = 0.5)
+      legend(x = (i-1)*n_timepoints,y = yrange[2]*.9, group_names, bty='n', text.font = 1, text.col = cols, cex = 0.5)
+    
     })
+    
+    
    
     
     
