@@ -14,6 +14,7 @@ graph_export = function(){
     
   )
 }
+
 #TODO add json
 output$export_pdf <- downloadHandler(
   filename = function(){
@@ -69,13 +70,14 @@ mds_plot <- function(){
   plot(mds_res[,pcs], type = 'n',xlab = 'X', ylab = 'Y')
   text(mds_res[,pcs], labels = paste0(collapsed_data$Subject,collapsed_data$Electrode),
        col = res$colors[res$clusters_res])
-  # legend('topright', sprintf('Cluster %d', seq_along(unique(res$clusters_res)),
-  #                            bty='n', text.font = 2, text.col = res$colors[seq_along(unique(res$clusters_res))]))
+  legend('topright', sprintf('Cluster %d', seq_along(unique(res$clusters_res)),
+                             bty='n', text.font = 2, text.col = res$colors[seq_along(unique(res$clusters_res))]))
   ravebuiltins:::rave_title(sprintf('%d %s %d %s',
                                     length(res$collapsed$Electrode),
                                     'electrodes across',
                                     length(unique(res$collapsed$Subject)),
                                     'patients'))
+
 }
 
 
@@ -119,9 +121,10 @@ dendrogram_plot <- function() {
   rave::set_rave_theme()
   plot(stats::dendrapply(as.dendrogram(local_data$cluster_method_output), leafCol),las = 1) 
   ravebuiltins:::rave_title(sprintf('%s %d %s %d %s','Hierarchical clustering of',
-                                    length(res$collapsed$Electrode), 
+                                    length(res$collapsed$Electrode),
                                     'electrodes across',
                                     length(unique(res$collapsed$Subject)),'patients'))
+
 }
 
 optimal_cluster_number_plot <- function(){
@@ -176,10 +179,10 @@ cluster_plot <-  function(separate = FALSE, cex.main = shiny_cex.main){
   if( separate ){
     
   } else {
-    if( nclust <= 2 ){
-      par(mfrow = c(1, nclust*2))
+    if( nclust <= 4 ){
+      par(mfrow = c(1, nclust))
     }else{
-      nrow = ceiling((nclust*2) / 4)
+      nrow = ceiling((nclust) / 4)
       par(mfrow = c(nrow, 4))
     }
     par(mar = c(2,4.1, 4.1, 2))
@@ -208,7 +211,7 @@ cluster_plot <-  function(separate = FALSE, cex.main = shiny_cex.main){
   xaxi = pretty(time_points)
   yaxi = pretty(yrange)
   
-  junk <- dipsaus::iapply(res$cluster_mse,function(x, cl_idx){
+  cache <- dipsaus::iapply(res$cluster_mse,function(x, cl_idx){
     # x = res$cluster_mse[[1]]
     # cl_idx = 1
     # time_points = preload_info$time_points
@@ -229,27 +232,27 @@ cluster_plot <-  function(separate = FALSE, cex.main = shiny_cex.main){
     a <- c('x','y','z')
     cols = seq_len(n_cond_groups)
 
+    rutabaga::plot_clean(1:(n_timepoints*n_var), ylim=yrange)
+    rutabaga::ruta_axis(2, yaxi)
     
-   
+    lapply(seq_len(n_cond_groups), function(j){
+      
+      sel = stringr::str_detect(time_columns, paste0('_', j))#,'.',a[i]))
+      
+      #time = as.numeric(stringr::str_extract(time_columns[sel], '^[^_]+'))
+      #time <- sort(time)
+      
+      rutabaga::ebar_polygon(1:sum(sel), cl_mean[sel], sem = cl_sd[sel], col = cols[[j]])
+    })
+    
+    abline(v = n_timepoints, lty = 2,col = "gray")
     
     lapply(seq_len(n_var), function(i){
-      
-      rutabaga::plot_clean(time_points, ylim=yrange)
-      
-      lapply(seq_len(n_cond_groups), function(j){
-        
-        if (i ==1 && j == 1) {
-          yaxi = pretty(yrange)
-          rutabaga::ruta_axis(2, yaxi)
-        }
-        sel = stringr::str_ends(time_columns, paste0('_', j,'.',a[i]))
-        
-        time = as.numeric(stringr::str_extract(time_columns[sel], '^[^_]+'))
-        time <- sort(time)
-        
-        rutabaga::ebar_polygon(time, cl_mean[sel], sem = cl_sd[sel], col = cols[[j]])
-      })
-      legend('topleft', var_name[i], bty='n', text.font = 2,cex = 1.25)
+      legend(x = (i-1)*n_timepoints,y = yrange[2], var_name[i], bty='n', text.font = 2,cex = 1)
+    })
+   
+    
+    
     
     
     # gc <- mapply(function(sub_x,ii){
@@ -260,21 +263,22 @@ cluster_plot <-  function(separate = FALSE, cex.main = shiny_cex.main){
     #   return(list(gnames = gnames, cols = cols))
     # }, x, seq_along(input$input_groups))
       
-      rutabaga::ruta_axis(1, xaxi)
+      #rutabaga::ruta_axis(1, xaxi)
       #,labels = if(separate){}else{local_data$analysis_data_raw$headers[3]})
-      legend('topright', group_names, bty='n', text.font = 2, text.col = cols)
-      ravebuiltins:::rave_title(
-        sprintf(
-          '%s%d (n=%d)',
-          'Cluster',
-          cl_idx,
-          sum(res$clusters_res == cl_idx)
+     
+    ravebuiltins:::rave_title(
+      sprintf(
+        '%s%d (n=%d)',
+        'Cluster',
+        cl_idx,
+        sum(res$clusters_res == cl_idx)
         ),
-        col = res$colors[cl_idx],
-        cex = cex.main
+      col = res$colors[cl_idx],
+      cex = cex.main
       )
-    })
+
   })
+  
   
 }
 

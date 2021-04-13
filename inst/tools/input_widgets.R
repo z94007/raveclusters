@@ -892,11 +892,14 @@ define_input_table_filters <- function(
               class = 'rave-grid-inputs',
               div(
                 style = 'flex-basis: 33%; min-height: 80px;',
-                selectInput(ns(sprintf('%s_var_', !!input_filter_prefix, ii)), 'Variable', choices = vars, selected = get_val(filter, 'var', default = NULL))
+                selectInput(ns(sprintf('%s_var_', !!input_filter_prefix, ii)), 'Variable', choices = vars, 
+                            selected = get_val(filter, 'var', default = NULL))
               ),
               div(
                 style = 'flex-basis: 33%; min-height: 80px;',
-                selectInput(ns(sprintf('%s_op_', !!input_filter_prefix, ii)), 'Operator', choices = c('=', '!=', '>', '>=', '<', '<=', 'in', 'not in', 'between'), selected = get_val(filter, 'op', default = '='))
+                selectInput(ns(sprintf('%s_op_', !!input_filter_prefix, ii)), 'Operator', 
+                            choices = c('=', '!=', '>', '>=', '<', '<=', 'in', 'not in', 'between'), 
+                            selected = get_val(filter, 'op', default = '='))
               ),
               div(
                 style = 'flex-basis: 33%; min-height: 80px;',
@@ -977,7 +980,8 @@ define_input_table_filters <- function(
           n_filters = ...ravemodule_environment_reserved[[!!input_ui]]$local_filters$filter_count
           if(!is.data.frame(...ravemodule_environment_reserved[[!!input_ui]]$data) || !length(n_filters) || n_filters < ii ){ return(NULL) }
           all_vars = names(...ravemodule_environment_reserved[[!!input_ui]]$data)
-          var = input[[sprintf('%s_var_', !!input_filter_prefix, ii)]]; op = input[[sprintf('%s_op_', !!input_filter_prefix, ii)]]; val = input[[sprintf('%s_val_', !!input_filter_prefix, ii)]]
+          var = input[[sprintf('%s_var_', !!input_filter_prefix, ii)]]; op = input[[sprintf('%s_op_', !!input_filter_prefix, ii)]]; 
+          val = input[[sprintf('%s_val_', !!input_filter_prefix, ii)]]
           var %?<-% ''; op %?<-% '='; val %?<-% ''
           val_txt = val
           # Do checks
