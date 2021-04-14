@@ -70,8 +70,8 @@ mds_plot <- function(){
   plot(mds_res[,pcs], type = 'n',xlab = 'X', ylab = 'Y')
   text(mds_res[,pcs], labels = paste0(collapsed_data$Subject,collapsed_data$Electrode),
        col = res$colors[res$clusters_res])
-  legend('topright', sprintf('Cluster %d', seq_along(unique(res$clusters_res)),
-                             bty='n', text.font = 2, text.col = res$colors[seq_along(unique(res$clusters_res))]))
+  # legend('topright', sprintf('Cluster %d', seq_along(unique(res$clusters_res)),
+  #                            bty='n', text.font = 2, text.col = res$colors[seq_along(unique(res$clusters_res))]))
   ravebuiltins:::rave_title(sprintf('%d %s %d %s',
                                     length(res$collapsed$Electrode),
                                     'electrodes across',
