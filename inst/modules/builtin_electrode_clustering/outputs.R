@@ -235,6 +235,7 @@ cluster_plot <-  function(separate = FALSE, cex.main = shiny_cex.main){
 
     rutabaga::plot_clean(1:(n_timepoints*n_var), ylim=yrange)
     rutabaga::ruta_axis(2, yaxi)
+    rutabaga::ruta_axis(1, xaxi)
     
     lapply(seq_len(n_cond_groups), function(j){
       
@@ -251,8 +252,8 @@ cluster_plot <-  function(separate = FALSE, cex.main = shiny_cex.main){
     
     lapply(seq_len(n_var), function(i){
       
-      legend(x = (i-1)*n_timepoints,y = yrange[2], var_name[i], bty='n', text.font = 2,cex = 0.5)
-      legend(x = (i-1)*n_timepoints,y = yrange[2]*.9, group_names, bty='n', text.font = 1, text.col = cols, cex = 0.5)
+      legend(x = (i-1)*n_timepoints,y = yrange[2], var_name[i], bty='n', text.font = 2,cex = 1)
+      legend(x = (i-1)*n_timepoints,y = yrange[2]*.9, group_names, bty='n', text.font = 1, text.col = cols, cex = 1)
     
     })
     
