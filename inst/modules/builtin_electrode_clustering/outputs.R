@@ -70,8 +70,8 @@ mds_plot <- function(){
   plot(mds_res[,pcs], type = 'n',xlab = 'X', ylab = 'Y')
   text(mds_res[,pcs], labels = paste0(collapsed_data$Subject,collapsed_data$Electrode),
        col = res$colors[res$clusters_res])
-  # legend('topright', sprintf('Cluster %d', seq_along(unique(res$clusters_res)),
-  #                            bty='n', text.font = 2, text.col = res$colors[seq_along(unique(res$clusters_res))]))
+  legend('topright', sprintf('Cluster %d', seq_along(unique(res$clusters_res))),
+                             bty='n', text.font = 2, text.col = res$colors[seq_along(unique(res$clusters_res))])
   ravebuiltins:::rave_title(sprintf('%d %s %d %s',
                                     length(res$collapsed$Electrode),
                                     'electrodes across',
@@ -84,10 +84,13 @@ mds_plot <- function(){
 cluster_membership_table <- function(){
   
   if(is.list(local_data$my_results)){
-    tbl = convert_cluster_table(local_data$my_results$cluster_table,split_by = 'Subject', var = "Cluster", value = "Electrode")
+    tbl = convert_cluster_table(local_data$my_results$cluster_table,
+                                split_by = 'Subject', var = "Cluster",
+                                value = "Electrode")
     div(
       style = 'overflow-x:scroll; height: 380px',
-      HTML(knitr::kable(tbl, format = 'html', row.names = FALSE, table.attr = 'class="table shiny-table table-striped"')) # spacing-xs
+      HTML(knitr::kable(tbl, format = 'html', row.names = FALSE,
+                        table.attr = 'class="table shiny-table table-striped"')) # spacing-xs
     )
   }else{
     div(
@@ -109,21 +112,70 @@ dendrogram_plot <- function() {
   
   labels = res$collapsed %$% paste0(Subject, Electrode)
   
-  leafCol <- function(x){
+  n = length(labels)
+  k = res$input_nclusters
+  col = res$colors[1:k]
+  
+  leafCol <- function(x,col){
     if(stats::is.leaf(x)){
       attr(x,'label') <- labels[x]
-      attr(x, 'nodePar') <- list(lab.col = res$colors[res$clusters_res[x]],pch = 46) #FIXME
+      attr(x, 'nodePar') <- list(lab.col = res$colors[res$clusters_res[x]],pch = 46,cex=0 )
+      attr(x, "edgePar") <- list(col = res$colors[res$clusters_res[x]])
+    }else{
+      if (is.null(attr(x, "edgePar"))) {
+        attr(x, "edgePar") <- list(col = col)
+      }
     }
-    return(x)
+    unclass(x)
   } 
+
+  #set lay out
+  layout(matrix(1:2, ncol=2),
+         widths = c(3/4, 1/4))
   
-  par(mfrow = c(1,1))
-  rave::set_rave_theme()
-  plot(stats::dendrapply(as.dendrogram(local_data$cluster_method_output), leafCol),las = 1) 
+  par(cex = 0.4, mar = c(0,1,0,5))
+  
+  # define the dendrogram
+  dend <- as.dendrogram(local_data$cluster_method_output)
+  
+  #color the nodes(leaves) and branches of the dendrogram (from dendextend package color_branches)
+  g <- dendextend::cutree(local_data$cluster_method_output,k = k,h = NULL)
+  descendTree <- function(sd) {
+    groupsinsubtree <- unique(g[labels(sd)])
+    if (length(groupsinsubtree) > 1) {
+      for (i in seq(sd)) {
+        sd[[i]] <- descendTree(sd[[i]])
+      }
+    }
+    else {
+      sd <- dendrapply(sd, leafCol,col[groupsinsubtree])
+      # if (!is.null(groupLabels)) {
+      #   attr(sd, "edgetext") <- groupLabels[groupsinsubtree]
+      #   attr(sd, "edgePar") <- c(attr(sd, "edgePar"), 
+      #                            list(p.border = col[groupsinsubtree]))
+      # }
+    }
+    unclass(sd)
+  }
+  
+  dend <- descendTree(dend) 
+  class(dend) <- 'dendrogram'
+  
+  #plot the horizontal dendrogram
+  plot(dend, las = 1,horiz = T, yaxt='n',#remove the y axis and labels
+       ylim = c(0, n+1))
+  #add clustering cutting line
+  MidPoint = (local_data$cluster_method_output$height[n-k] + local_data$cluster_method_outpu$height[n-k+1]) / 2
+  abline(v = MidPoint, lty=2)
+  
   ravebuiltins:::rave_title(sprintf('%s %d %s %d %s','Hierarchical clustering of',
                                     length(res$collapsed$Electrode),
                                     'electrodes across',
                                     length(unique(res$collapsed$Subject)),'patients'))
+  legend('topleft', sprintf('Cluster %d', seq_along(unique(res$clusters_res))),
+                             bty='n', text.font = 2, cex=1.5, text.col = res$colors[seq_along(unique(res$clusters_res))])
+    # legend('topleft', legend=paste0('clust', rev(runle$values)),
+    #      cex=1, text.col = 1 + rev(runle$values), bty='n')
 
 }
 
@@ -135,7 +187,7 @@ optimal_cluster_number_plot <- function(){
     shiny::need(!is.null(res)&&!is.null(res$indata), message = 'Please press "Run Analysis" after loading data')
   )
     
-  rave::set_rave_theme()
+  rave::set_rave_theme()#why
   #, message = 'Please press "Optimal Number of Clusters Analysis" '))
  # observe(input$op_run,{  
   
@@ -329,10 +381,15 @@ viewer_3d_fun <- function(...){
     tbl[[roi_varname]] = res$roi
   }
   
-  bs = lapply(subjects, function(sub){
-    rave::rave_brain2(sprintf('%s/%s', project_name, sub))
-  })
-  brain = threeBrain::merge_brain(.list = bs)
+  if (length(subjects) >1) {
+    brain = lapply(subjects, function(sub){
+      rave::rave_brain2(sprintf('%s/%s', project_name, sub))
+    })
+    brain = threeBrain::merge_brain(.list = brain)
+  }else{
+    brain = rave::rave_brain2(sprintf('%s/%s', project_name, subjects))
+  }
+
   
   brain$set_electrode_values(tbl)
   
