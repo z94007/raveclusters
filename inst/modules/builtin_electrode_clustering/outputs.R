@@ -381,13 +381,18 @@ viewer_3d_fun <- function(...){
     tbl[[roi_varname]] = res$roi
   }
   
-  if (length(subjects) >1) {
-    brain = lapply(subjects, function(sub){
-      rave::rave_brain2(sprintf('%s/%s', project_name, sub))
-    })
+  brain = lapply(subjects, function(sub){
+    rave::rave_brain2(sprintf('%s/%s', project_name, sub))
+  })
+  
+  brain <- dipsaus::drop_nulls(brain)
+  if(length(subjects) > 1){
     brain = threeBrain::merge_brain(.list = brain)
-  }else{
-    brain = rave::rave_brain2(sprintf('%s/%s', project_name, subjects))
+  } else if(!length(brain)) {
+    # show message like "no brain exists"
+    
+  } else {
+    brain <- brain[[1]]
   }
 
   
