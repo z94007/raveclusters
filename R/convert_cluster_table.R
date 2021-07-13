@@ -7,7 +7,7 @@ convert_cluster_table <- function(x, split_by = 'A', var = 'C', value = 'B'){
   })
   names(res) = paste0(var, clusters)
   res = as.data.frame(res)
-  res = data.frame(Subject = tbl[[split_by]][[1]], res)
+  res = data.frame(Subject = tbl[[split_by]][[1]], res, Total = dim(tbl)[1])
   res
 })
   res <- do.call('rbind', res)
