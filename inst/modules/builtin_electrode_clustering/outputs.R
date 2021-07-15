@@ -390,7 +390,7 @@ viewer_3d_fun <- function(...){
     brain = threeBrain::merge_brain(.list = brain)
   } else if(!length(brain)) {
     # show message like "no brain exists"
-    
+    message('there is no brain data exists')
   } else {
     brain <- brain[[1]]
   }
