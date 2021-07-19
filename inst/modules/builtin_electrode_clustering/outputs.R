@@ -293,10 +293,12 @@ cluster_plot <-  function(separate = FALSE, cex.main = shiny_cex.main){
       
       sel = stringr::str_detect(time_columns, paste0('_', j))#,'.',a[i]))
       
-      #time = as.numeric(stringr::str_extract(time_columns[sel], '^[^_]+'))
-      #time <- sort(time)
+      time = as.numeric(stringr::str_extract(time_columns[sel], '^[^_]+'))
+      time <- sort(time)
       
-      rutabaga::ebar_polygon(1:sum(sel), cl_mean[sel], sem = cl_sd[sel], col = cols[[j]])
+      sel_sorted <- paste0(time,'_',j)
+        
+      rutabaga::ebar_polygon(1:sum(sel), cl_mean[sel_sorted], sem = cl_sd[sel_sorted], col = cols[[j]])
       
     })
     
