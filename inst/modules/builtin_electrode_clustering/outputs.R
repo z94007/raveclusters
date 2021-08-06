@@ -287,7 +287,7 @@ cluster_plot <-  function(separate = FALSE, cex.main = shiny_cex.main){
 
     rutabaga::plot_clean(1:(n_timepoints*n_var), ylim=yrange)
     rutabaga::ruta_axis(2, yaxi)
-    rutabaga::ruta_axis(1, xaxi)
+    rutabaga::ruta_axis(1, labels = xaxi, at=n_timepoints*xaxi)
     
     lapply(seq_len(n_cond_groups), function(j){
       
@@ -302,7 +302,7 @@ cluster_plot <-  function(separate = FALSE, cex.main = shiny_cex.main){
       
     })
     
-    abline(v = n_timepoints, lty = 2,col = "gray")
+    #abline(v = n_timepoints, lty = 2,col = "gray")
     
     lapply(seq_len(n_var), function(i){
       

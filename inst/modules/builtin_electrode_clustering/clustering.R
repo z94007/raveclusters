@@ -175,7 +175,7 @@ clustering_analysis <- function(){
   }
   
 
-  if (check_scale) {
+  if (input$check_scale) {#with or without 'input', what is the difference? 
     indata = t(scale(t(indata)))
   }
   
@@ -190,7 +190,7 @@ clustering_analysis <- function(){
   if (input$input_method == "H-Clust"){
     hcl = stats::hclust(dis, method = 'ward.D')
     local_data$cluster_method_output = hcl
-    clusters <- cutree(hcl, k = n_clust)
+    clusters <- stats::cutree(hcl, k = n_clust)
   } else if (input$input_method == "PAM") {
     #km <- kmeans(indata, centers = n_clust,iter.max = 100, )
     #clusters <- km$cluster
