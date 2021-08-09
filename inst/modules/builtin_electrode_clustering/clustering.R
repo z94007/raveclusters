@@ -6,6 +6,7 @@
 
 #----------------------------------------------
 
+
 observeEvent(input$do_run, {
   print('lalalala')#FIXME
   res = clustering_analysis()
