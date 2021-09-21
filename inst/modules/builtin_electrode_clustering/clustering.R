@@ -76,7 +76,7 @@ clustering_analysis <- function(){
     
     group_condition = group$group_conditions
 
-    print('start data deformation...')
+    print(paste0('start data deformation... Group', ii))
     
     sub = raw_table[raw_table$Condition %in% group_condition 
                                             & raw_table$Time %within% input$time_window, ]
@@ -195,7 +195,8 @@ clustering_analysis <- function(){
   } else if (input$input_method == "PAM") {
     #km <- kmeans(indata, centers = n_clust,iter.max = 100, )
     #clusters <- km$cluster
-    km <- cluster::pam(dis, k = n_clust,  cluster.only = TRUE, keep.data = FALSE, keep.diss = FALSE)
+    km <- cluster::pam(dis, k = n_clust,  cluster.only = TRUE, keep.data = FALSE, 
+                       keep.diss = FALSE)
     local_data$cluster_method_output = km
     clusters <- km
   }

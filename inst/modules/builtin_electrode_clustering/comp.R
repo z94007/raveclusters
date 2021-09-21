@@ -187,13 +187,12 @@ input_layout = list(
     'input_groups'
   ),
   'Analysis Settings' = list(
-    c( 'input_method', 'input_nclusters' ),
-    c('model_dependent'),
-    c('model_roi_variable'),
-    c('filter_by_roi'),
+    c('model_dependent'),#should be deleted?
+    c('model_roi_variable','filter_by_roi'),
     c('roi_ignore_hemisphere', 'roi_ignore_gyrus_sulcus'),
     'trial_selected',
     'time_window',
+    c( 'input_method', 'input_nclusters' ),
     'distance_method',
     'mds_distance_method',
     c('check_scale',
@@ -250,15 +249,15 @@ manual_inputs = c(
 define_output(
   definition = plotOutput('mds_plot'),
   title = 'MDS Diagnosis',
-  width = 4,
-  order = 2
+  width = 4L,
+  order = 2.155
 )
 
 
 define_output(
   definition = plotOutput('cluster_plot'),
   title = 'Cluster Visualization',
-  width = 8,
+  width = 12L,
   order = 1
 )
 
@@ -279,7 +278,7 @@ define_output(
 define_output(
   definition = plotOutput('optimal_cluster_number_plot'),
   title = 'Optimal number of clusters',
-  width = 12L,
+  width = 8L,
   order = 2.16
 )
 

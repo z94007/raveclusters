@@ -66,8 +66,8 @@ mds_plot <- function(){
   
   par(mfrow = c(1,1))
 
-  pcs = 1:2
-  plot(mds_res[,pcs], type = 'n',xlab = 'X', ylab = 'Y')
+  pcs = 1:2#why???
+  plot(mds_res[,pcs], type = 'n',xlab = '', ylab = '')
   text(mds_res[,pcs], labels = paste0(collapsed_data$Subject,collapsed_data$Electrode),
        col = res$colors[res$clusters_res])
   legend('topright', sprintf('Cluster %d', seq_along(unique(res$clusters_res))),
@@ -261,11 +261,11 @@ cluster_plot <-  function(separate = FALSE, cex.main = shiny_cex.main){
     max(colSums(x), na.rm = TRUE)
   }))+1)
   xaxi = pretty(time_points)
-  yaxi = pretty(yrange)
+  yaxi = pretty(yrange)#FIXME
   
   
   cache <- dipsaus::iapply(res$cluster_mse,function(x, cl_idx){
-    # x = res$cluster_mse[[1]]
+    # x = res$cluster_mse[[2]]
     # cl_idx = 1
     # time_points = preload_info$time_points
     cl_mean = x[1,]
