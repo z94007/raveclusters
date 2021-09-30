@@ -46,6 +46,13 @@ clustering_analysis <- function(){
   # Get data
   #local_data = ...local_data
   #input = ...input
+  
+  progress = rave::progress("Run clustering", max = 5)
+  on.exit({
+    progress$close()
+  })
+  
+  progress$inc("Apply ROI filter")
   raw_table <- local_data$analysis_data_raw$data
   
   
@@ -61,9 +68,11 @@ clustering_analysis <- function(){
   #select based on the ROI selector
   use_regex <- ( input$roi_ignore_gyrus_sulcus || input$roi_ignore_hemisphere )
   
-  raw_table <- table_apply_roi(table = raw_table, roi_column = roi_var, roi = input$filter_by_roi, use_regex = use_regex)
+  raw_table <- table_apply_roi(table = raw_table, roi_column = roi_var,
+                               roi = input$filter_by_roi, use_regex = use_regex)
   
-
+  progress$inc("Collapsing group data")
+  
   collapsed = lapply(seq_along(input$input_groups), function( ii ){
     
     group = input$input_groups[[ ii ]]
@@ -115,6 +124,9 @@ clustering_analysis <- function(){
   
   group_names = sapply(collapsed, '[[', 'group_name')#FIXME
   # merge(..., all=TRUE) will keep all the IDs, FALSE will be inner join
+  
+  progress$inc("Merging collapsed data")
+  
   merged = Reduce(function(a, b){
     # b <- collapsed[[1]]
     list(
@@ -163,6 +175,7 @@ clustering_analysis <- function(){
   
   time_columns = names(indata)
 
+  progress$inc("Running MDS on merged data")
   
   #MDS
   if( ncol(indata) <= 2 ){
@@ -176,13 +189,14 @@ clustering_analysis <- function(){
   }
   
 
+
   if (input$check_scale) {#with or without 'input', what is the difference? 
     indata = t(scale(t(indata)))
   }
   
   
   #clustering
-  print('start clustering analysis')
+  progress$inc('start clustering analysis')
   
   n_clust = min(input$input_nclusters, nrow(collapsed))
   
@@ -225,7 +239,7 @@ clustering_analysis <- function(){
   names(colors)=unique(clusters)
   
 
-  print('cluster finished')
+  # print('cluster finished')
   # plot(tsne$Y, t = 'n')
   # text(tsne$Y, labels = baselined$dimnames$Electrode, col = colors[clusters])
   
