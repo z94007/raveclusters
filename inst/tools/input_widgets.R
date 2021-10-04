@@ -825,11 +825,36 @@ define_input_analysis_data_fst <- function(
             confs = lapply(tbls, '[[', 'conf')
             names(confs) = subjects
             
+            electrode_tables <- sapply(subjects, function(sub){
+              elec_tbl <- rave::load_meta(meta_type = "electrodes", 
+                                          project_name = project_name,
+                                          subject_code = sub)
+              
+              if(is.null(elec_tbl)){
+                return()
+              }
+              
+              if("Group" %in% names(elec_tbl)){
+                # electrode group is defined, I can find empty electrodes
+                elec_tbl$IsEmpty <- elec_tbl$Group %in% c("Empty", "empty")
+              } else {
+                # group is not defined, all electrodes should be non-empty
+                elec_tbl$IsEmpty <- FALSE
+              }
+              elec_tbl$Subject <- sub
+              if(!"freesurferlabel" %in% names(elec_tbl)){
+                # no freesurfer labels
+                elec_tbl$freesurferlabel <- NA
+              }
+              elec_tbl[,c("Subject", "Electrode", "Label", "freesurferlabel", "IsEmpty")]
+            }, simplify = FALSE)
+            
             res = list(
               data = res,
               subjects = subjects,
               confs = confs,
-              headers = names(res)
+              headers = names(res),
+              electrode_tables = electrode_tables
             )
             
           }

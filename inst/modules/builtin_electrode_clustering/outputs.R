@@ -133,7 +133,7 @@ dendrogram_plot <- function() {
   layout(matrix(1:2, ncol=2),
          widths = c(3/4, 1/4))
   
-  par(cex = 0.4, mar = c(0,1,0,5))
+  par(cex = 1, mar = c(0,1,0,5))
   
   # define the dendrogram
   dend <- as.dendrogram(local_data$cluster_method_output)

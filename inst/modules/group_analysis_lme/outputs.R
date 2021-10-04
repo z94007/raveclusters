@@ -37,7 +37,7 @@ windowed_activity <- function(lmer_results, collapsed_data) {
     
     .y <- aggregate(Power ~ Group, m_se, data=collapsed_data)
     
-    xp <- rutabaga::rave_barplot(.y$Power[,1], axes=F, col = adjustcolor(1:nrow(.y), 0.7),
+    xp <- rutabaga::rave_barplot(.y$Power[,1], axes=FALSE, col = adjustcolor(seq_len(nrow(.y)), 0.7),
                            border=NA,
                            ylim = range(pretty(c(0, plus_minus(.y$Power[,1], .y$Power[,2])))),
                            names.arg=.y$Group)
