@@ -3,3 +3,7 @@
 ^hello\.R$
 ^readme\.md$
 adhoc/
+^\.github$
+^_pkgdown\.yml$
+^docs$
+^pkgdown$

@@ -1,6 +1,8 @@
-# README
-
 ## Cluster Power Activities across Multiple Subjects
+
+<!-- badges: start --
+[![R-CMD-check](https://github.com/z94007/raveclusters/workflows/R-CMD-check/badge.svg)](https://github.com/z94007/raveclusters/actions)
+<!-- badges: end -->
 
 This module does xxx. Objective? Use case? 
 
@@ -27,12 +29,12 @@ Add a use case (for example, if I want h-cluster, how to set params)
 
 **Inputs** :
 
-| Id                  | label                                               | Class            | Discription                                                                                                                                 |
+| Id                  | label                                               | Class            | Description                                                                                                                                 |
 | ------------------- | --------------------------------------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | analysis_data       | Data files located in this project's RAVE directory |                  |                                                                                                                                             |
 | check_scale         | Z-score data                                        | checkbox (logic) | if selected, z-scoring would be applied on the signals within the selected time window across electrodes                                    |
 | input_groups        | Condition Group                                     | list             | The condition groups that we would like to study, with elements as selected conditions and given list element names as condition group name |
-| input_method        | Clustering Method                                   | character        | name of cluster agorithms(ex. 'H-Clust', 'PAM')                                                                                             |
+| input_method        | Clustering Method                                   | character        | name of cluster algorithms (ex. 'H-Clust', 'PAM')                                                                                             |
 | time_window         | Time Window                                         | number           | a 2-element vector to indicate the time window range, the analysis would only apply on the power within the time window                     |
 | distance_method     | Clustering Distance Measurement                     | character        | methods to calculate the distance (dissimilarity) for the clustering (ex. 'euclidean', 'maximum',"manhattan", "canberra", "minkowski")      |
 | mds_distance_method | MDS Distance Measurement                            |                  | methods to calculate the distance between points to generate the mds diagnosis (ex. 'euclidean', 'maximum',"manhattan","canberra")          |
