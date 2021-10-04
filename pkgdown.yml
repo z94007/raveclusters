@@ -1,0 +1,10 @@
+pandoc: 2.7.3
+pkgdown: 1.6.1
+pkgdown_sha: ~
+articles:
+  A_Quick_Start: A_Quick_Start.html
+last_built: 2021-10-04T19:22Z
+urls:
+  reference: https://z94007.github.io/raveclusters/reference
+  article: https://z94007.github.io/raveclusters/articles
+
