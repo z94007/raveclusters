@@ -27,7 +27,9 @@ Imports:
     rave,
     dipsaus,
     threeBrain,
-    rutabaga
+    rutabaga,
+    dendextend (>= 1.15.1),
+    factoextra (>= 1.0.7)
 Suggests:
     rstudioapi (>= 0.9.0),
     knitr,
