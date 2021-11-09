@@ -133,7 +133,7 @@ dendrogram_plot <- function() {
   layout(matrix(1:2, ncol=2),
          widths = c(3/4, 1/4))
   
-  par(cex = 0.4, mar = c(0,1,0,5))
+  par(cex = .7, mar = c(0,1,0,1))
   
   # define the dendrogram
   dend <- as.dendrogram(local_data$cluster_method_output)
@@ -162,21 +162,39 @@ dendrogram_plot <- function() {
   class(dend) <- 'dendrogram'
   
   #plot the horizontal dendrogram
-  plot(dend, las = 1,horiz = T, yaxt='n',#remove the y axis and labels
+  plot(dend, las = 1,horiz = TRUE, yaxt='n',#remove the y axis and labels
        ylim = c(0, n+1))
+
+  
   #add clustering cutting line
   MidPoint = (local_data$cluster_method_output$height[n-k] + local_data$cluster_method_outpu$height[n-k+1]) / 2
   abline(v = MidPoint, lty=2)
   
-  ravebuiltins:::rave_title(sprintf('%s %d %s %d %s','Hierarchical clustering of',
-                                    length(res$collapsed$Electrode),
-                                    'electrodes across',
-                                    length(unique(res$collapsed$Subject)),'patients'))
+  # ravebuiltins:::rave_title(sprintf('%s %d %s %d %s','Hierarchical clustering of',
+  #                                   length(res$collapsed$Electrode),
+  #                                   'electrodes across',
+  #                                   length(unique(res$collapsed$Subject)),'patients'),cex = 1.5)
   legend('topleft', sprintf('Cluster %d', seq_along(unique(res$clusters_res))),
                              bty='n', text.font = 2, cex=1.5, text.col = res$colors[seq_along(unique(res$clusters_res))])
     # legend('topleft', legend=paste0('clust', rev(runle$values)),
     #      cex=1, text.col = 1 + rev(runle$values), bty='n')
 
+  plot_signals2 <- function(signals, space, ylim1 = c(0, 1), ...){
+    space <- stats::quantile(signals, space, na.rm = TRUE) * 2
+    nr <- nrow(signals)
+    ylim0 <- range(seq_len(nr) * space + signals, na.rm = TRUE)
+    scale <- (ylim1[2] - ylim1[1]) / (ylim0[2] - ylim0[1])
+    space <- space * scale
+    signals <- (signals - ylim0[1]) * scale + ylim1[1]
+    
+    plot_clean(xlim = c(1, ncol(signals)), ...)
+    
+    plot_signals(signals = signals, space = space, space_mode = "asis", 
+                 new_plot = FALSE)
+  }
+  
+  plot_signals2(res$indata, space = 0.99, ylim = c(-1, n+2), ylim1 = c(0, n+1))
+  
 }
 
 optimal_cluster_number_plot <- function(){
@@ -227,7 +245,7 @@ cluster_plot <-  function(separate = FALSE, cex.main = shiny_cex.main){
   
   shiny::validate(shiny::need(!is.null(res$cluster_mse), message = 'Please press "Run Analysis" '))
   
-  rave::set_rave_theme()
+  #rave::set_rave_theme()
   if( separate ){
     
   } else {
@@ -237,7 +255,7 @@ cluster_plot <-  function(separate = FALSE, cex.main = shiny_cex.main){
       nrow = ceiling((nclust) / 4)
       par(mfrow = c(nrow, 4))
     }
-    par(mar = c(2,4.1, 4.1, 2))
+    par(mar = c(4.1,4.1, 4.1, 2))
   }
   
   
@@ -265,13 +283,15 @@ cluster_plot <-  function(separate = FALSE, cex.main = shiny_cex.main){
   
   
   cache <- dipsaus::iapply(res$cluster_mse,function(x, cl_idx){
-    # x = res$cluster_mse[[2]]
+    
+    # debug settings
+    # x = res$cluster_mse[[1]]
     # cl_idx = 1
     # time_points = preload_info$time_points
+    
     cl_mean = x[1,]
     cl_sd = x[2,]
     
-    #time_columns = names(res$indata)
     time_columns = res$time_columns
     
     # case 1 variable y-lim
@@ -279,42 +299,45 @@ cluster_plot <-  function(separate = FALSE, cex.main = shiny_cex.main){
     # case 2 fixed yrange for all plots
     #rutabaga::plot_clean(time_points, ylim=yrange) ##FIXME
     
-    
-    #gnames = NULL
-    #j=1
-    #a <- c('x','y','z')
+    # set colors and layout canvase
     cols = seq_len(n_cond_groups)
 
-    rutabaga::plot_clean(1:(n_timepoints*n_var), ylim=yrange)
+    rutabaga::plot_clean(1:(n_timepoints*n_var), ylim=range(yaxi))
     rutabaga::ruta_axis(2, yaxi)
-    rutabaga::ruta_axis(1, labels = xaxi, at=n_timepoints*xaxi)
+    rutabaga::ruta_axis(1, labels = xaxi, at=n_timepoints*xaxi/res$time_range[2])
     
+    # plot the lines 
     lapply(seq_len(n_cond_groups), function(j){
       
       sel = stringr::str_detect(time_columns, paste0('_', j))#,'.',a[i]))
       
-      time = as.numeric(stringr::str_extract(time_columns[sel], '^[^_]+'))
-      time <- sort(time)
+      #time = as.numeric(stringr::str_extract(time_columns[sel], '^[^_]+'))
+      time <- sort(time_points)
       
       sel_sorted <- paste0(time,'_',j)
         
-      rutabaga::ebar_polygon(1:sum(sel), cl_mean[sel_sorted], sem = cl_sd[sel_sorted], col = cols[[j]])
+      rutabaga::ebar_polygon(1:sum(sel), cl_mean[sel_sorted], 
+                             sem = cl_sd[sel_sorted], col = cols[[j]])
       
     })
     
+    
+    
+    # add the line to seperate different events
     #abline(v = n_timepoints, lty = 2,col = "gray")
     
+    # add the legend of condition groups
     lapply(seq_len(n_var), function(i){
-      
-      legend(x = (i-1)*n_timepoints,y = yrange[2], var_name[i], bty='n', text.font = 2,cex = 1)
-      legend(x = (i-1)*n_timepoints,y = yrange[2]*.9, group_names, bty='n', text.font = 1, text.col = cols, cex = 1)
+      #legend(x = (i-1)*n_timepoints,y = yrange[2], var_name[i], bty='n', text.font = 2,cex = 1)
+      legend(x = (i-1)*n_timepoints,y = range(yaxi)[2], group_names, bty='n', 
+             text.font = 1, text.col = cols, cex = 1)}
     
-    })
+    )
     
-    
-   
-    
-    
+    #label of y-axis
+    mtext('z-score % change Amplitude', side = 2, line = 2,cex = 1.5)
+    mtext('Time(s)', side = 1, line = 2,cex = 1.5)
+    # mtext('z-score % change Amplitude', side = 3, line = 0, at= 0)
     
     
     # gc <- mapply(function(sub_x,ii){

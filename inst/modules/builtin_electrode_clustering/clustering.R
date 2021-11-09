@@ -201,7 +201,7 @@ clustering_analysis <- function(){
   n_clust = min(input$input_nclusters, nrow(collapsed))
   
   #input = ...input
-  dis = stats::dist(indata, method = input$distance_method)
+  dis = dist(indata, method = input$distance_method)
   if (input$input_method == "H-Clust"){
     hcl = stats::hclust(dis, method = 'ward.D')
     local_data$cluster_method_output = hcl

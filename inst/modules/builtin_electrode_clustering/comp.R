@@ -187,13 +187,13 @@ input_layout = list(
     'input_groups'
   ),
   'Analysis Settings' = list(
+    'trial_selected',
     c('model_dependent'),#should be deleted?
     c('model_roi_variable','filter_by_roi'),
     c('roi_ignore_hemisphere', 'roi_ignore_gyrus_sulcus'),
-    'trial_selected',
     'time_window',
-    c( 'input_method', 'input_nclusters' ),
-    'distance_method',
+    'input_method',
+    c('input_nclusters','distance_method' ),
     'mds_distance_method',
     c('check_scale',
     'op_run'),
