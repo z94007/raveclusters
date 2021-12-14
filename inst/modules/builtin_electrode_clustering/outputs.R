@@ -350,7 +350,13 @@ cluster_plot <-  function(separate = FALSE, cex.main = shiny_cex.main){
     )
     
     #label of y-axis
-    #mtext('z-score % change Amplitude', side = 2, line = 2,cex = 1.5)
+    if(input$check_scale){
+      y_label = 'z-scored'
+    } else {
+      y_label = NULL
+    }
+    
+    mtext(paste0(y_label,'% change Amplitude'), side = 2, line = 2,cex = 1.5)
     mtext('Time(s)', side = 1, line = 2,cex = 1.5)
     # mtext('z-score % change Amplitude', side = 3, line = 0, at= 0)
     
@@ -460,7 +466,8 @@ viewer_3d_fun <- function(...){
     side_width = 160, side_shift = c(0,0), 
     palettes = list(
       'Cluster' = res$colors,
-      'Selected' = c("black", '#1B9E77')
+      'Selected' = c("black", '#1B9E77'),
+      '[Subject]' = 'black'
     )
   )
 }

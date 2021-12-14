@@ -53,6 +53,9 @@ observe({
                                 ), value = groups)
   
   updateSliderInput(session, 'time_window', min = time_range[[1]], 
+                    max=time_range[[2]], value=c(0,1.5))
+  
+  updateSliderInput(session, 'plot_time_window', min = time_range[[1]], 
                     max=time_range[[2]], value=analysis_window)
   
   nms = names(raw$data)
