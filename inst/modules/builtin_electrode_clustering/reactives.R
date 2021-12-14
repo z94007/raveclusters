@@ -10,6 +10,14 @@ local_data %?<-% reactiveValues(
 RAVE_ROI_KEY = 'VAR_IS_ROI_'
 model_params = dipsaus::fastmap2()
 
+minkowski_p_ui <- function(){
+  if(isTRUE(input$distance_method == "minkowski")){
+    p("asdasdada")
+  } else {
+    ""
+  }
+}
+
 observe({
   dipsaus::cat2('main observe', level='INFO')
   

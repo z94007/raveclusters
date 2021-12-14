@@ -103,7 +103,7 @@ define_input(
 )
 
 define_input(
-  definition = sliderInput(inputId = 'time_window', label = 'Time Window', 
+  definition = sliderInput(inputId = 'time_window', label = 'Analysis Time Window', 
                 min = -1, 
                 max= 2,
                 value = c(0,1.0),
@@ -117,6 +117,19 @@ define_input(
   # }
 
 
+)
+
+define_input(
+  definition = sliderInput(inputId = 'plot_time_window', label = 'Plotting Time Window', 
+                           min = -1, 
+                           max= 2,
+                           value = c(0,1.0),
+                           step = 0.01)
+)
+
+
+define_input(
+  definition = customizedUI(inputId = "minkowski_p_ui")#TODO
 )
 
 define_input(
@@ -192,6 +205,7 @@ input_layout = list(
     c('model_roi_variable','filter_by_roi'),
     c('roi_ignore_hemisphere', 'roi_ignore_gyrus_sulcus'),
     'time_window',
+    'plot_time_window',
     'input_method',
     c('input_nclusters','distance_method' ),
     'mds_distance_method',

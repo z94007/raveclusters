@@ -104,7 +104,7 @@ cluster_membership_table <- function(){
 dendrogram_plot <- function() {
   res <- local_data$my_results
   
-  shiny::validate(shiny::need(!is.null(res$cluster_mse), message = 'Please press "Run Analysis" '))
+  shiny::validate(shiny::need(!is.null(res$mse), message = 'Please press "Run Analysis" '))
   
   shiny::validate(shiny::need(input$input_method == 'H-Clust', 'Only available for method = H-clust'))
   
@@ -237,13 +237,14 @@ optimal_cluster_number_plot <- function(){
 
 cluster_plot <-  function(separate = FALSE, cex.main = shiny_cex.main){
   
-  palette(ravebuiltins::get_palette("Beautiful Field"))
+  
+  palette(ravebuiltins::get_palette("Beautiful Field")) #condition group color code
   
   res <- local_data$my_results
   
-  nclust = length(unique(res$clusters_res))
+  nclust = max(res$clusters_res)
   
-  shiny::validate(shiny::need(!is.null(res$cluster_mse), message = 'Please press "Run Analysis" '))
+  shiny::validate(shiny::need(!is.null(res$mse), message = 'Please press "Run Analysis" '))
   
   #rave::set_rave_theme()
   if( separate ){
@@ -260,8 +261,14 @@ cluster_plot <-  function(separate = FALSE, cex.main = shiny_cex.main){
   
   
   
-  time_points =  unique(local_data$analysis_data_raw$data$Time[local_data$analysis_data_raw$data$Time 
-                                                               %within% res$time_range])
+
+  time_points_plot =  unique(local_data$analysis_data_raw$data$Time[local_data$analysis_data_raw$data$Time 
+                                                               %within% res$time_range_plot])
+  
+  time_points =  time_points_plot[time_points_plot %within% res$time_range]
+  
+  n_timepoints_plot = length(time_points_plot)
+  
   n_timepoints = length(time_points)
   
   group_names = res$group_names
@@ -269,30 +276,29 @@ cluster_plot <-  function(separate = FALSE, cex.main = shiny_cex.main){
   
   var_name = input$trial_selected
   n_var = length(var_name)
-  #res
-  yrange = c(min(sapply(res$cluster_mse, function(x){
-    x[2,is.na(x[2,])] = 0
+  
+  yrange = c(min(sapply(res$mse, function(x){
+    x[2,is.na(x[2,])] = 0 # replace na with 0
     min(x[1,]-x[2,], na.rm = TRUE)
-  }))-1
-  ,max(sapply(res$cluster_mse, function(x){
+  }))
+  ,max(sapply(res$mse, function(x){
     x[2,is.na(x[2,])] = 0
     max(colSums(x), na.rm = TRUE)
-  }))+1)
-  xaxi = pretty(time_points)
-  yaxi = pretty(yrange)#FIXME
+  })))
+  xaxi = pretty(time_points_plot)
+  yaxi = pretty(yrange)
   
   
-  cache <- dipsaus::iapply(res$cluster_mse,function(x, cl_idx){
+  cache <- dipsaus::iapply(res$mse,function(x, cl_idx){
     
     # debug settings
-    # x = res$cluster_mse[[1]]
+    # x = res$mse[[1]]
     # cl_idx = 1
     # time_points = preload_info$time_points
     
     cl_mean = x[1,]
     cl_sd = x[2,]
     
-    time_columns = res$time_columns
     
     # case 1 variable y-lim
     #FIXME#yrange = range(cl_mean, cl_mean+cl_sd, cl_mean-cl_sd, na.rm = TRUE)#keep it?
@@ -302,21 +308,30 @@ cluster_plot <-  function(separate = FALSE, cex.main = shiny_cex.main){
     # set colors and layout canvase
     cols = seq_len(n_cond_groups)
 
-    rutabaga::plot_clean(1:(n_timepoints*n_var), ylim=range(yaxi))
+    rutabaga::plot_clean(xlim = res$time_range_plot, ylim=range(yaxi))
     rutabaga::ruta_axis(2, yaxi)
-    rutabaga::ruta_axis(1, labels = xaxi, at=n_timepoints*xaxi/res$time_range[2])
+    rutabaga::ruta_axis(1, labels = xaxi, at=xaxi)#n_timepoints_plot*xaxi/res$time_range_plot[2])
+    
+    #plot the rectangle of analysis window
+    x_rect <- res$time_range
+    y_rect <- range(yaxi)
+    
+    rect(x_rect[1], y_rect[1],x_rect[2],y_rect[2],
+         col = rgb(red = 1, green = 0, blue = 0, alpha = 0.05), border = NA)
+    legend(x_rect[1],y_rect[2],'Analysis', text.col = 'red', bty='n', 
+           text.font = 1,)#FIXME#the location of this should not overlap with the legend of group conditon
     
     # plot the lines 
     lapply(seq_len(n_cond_groups), function(j){
+
+
       
-      sel = stringr::str_detect(time_columns, paste0('_', j))#,'.',a[i]))
+      sel_sorted <- paste0(sort(time_points_plot),'_',j)
       
-      #time = as.numeric(stringr::str_extract(time_columns[sel], '^[^_]+'))
-      time <- sort(time_points)
-      
-      sel_sorted <- paste0(time,'_',j)
+      x_lim <- seq(res$time_range_plot[1],res$time_range_plot[2], 
+                   length.out = n_timepoints_plot)
         
-      rutabaga::ebar_polygon(1:sum(sel), cl_mean[sel_sorted], 
+      rutabaga::ebar_polygon(x_lim, cl_mean[sel_sorted], 
                              sem = cl_sd[sel_sorted], col = cols[[j]])
       
     })
@@ -329,13 +344,13 @@ cluster_plot <-  function(separate = FALSE, cex.main = shiny_cex.main){
     # add the legend of condition groups
     lapply(seq_len(n_var), function(i){
       #legend(x = (i-1)*n_timepoints,y = yrange[2], var_name[i], bty='n', text.font = 2,cex = 1)
-      legend(x = (i-1)*n_timepoints,y = range(yaxi)[2], group_names, bty='n', 
+      legend(x = res$time_range_plot[1],y = range(yaxi)[2], group_names, bty='n', 
              text.font = 1, text.col = cols, cex = 1)}
     
     )
     
     #label of y-axis
-    mtext('z-score % change Amplitude', side = 2, line = 2,cex = 1.5)
+    #mtext('z-score % change Amplitude', side = 2, line = 2,cex = 1.5)
     mtext('Time(s)', side = 1, line = 2,cex = 1.5)
     # mtext('z-score % change Amplitude', side = 3, line = 0, at= 0)
     
@@ -413,18 +428,41 @@ viewer_3d_fun <- function(...){
   brain <- dipsaus::drop_nulls(brain)
   if(length(subjects) > 1){
     brain = threeBrain::merge_brain(.list = brain)
+    
+    all_electrodes <- do.call('rbind', lapply(brain$objects, function(b){
+      elecs <- b$electrodes$raw_table$Electrode
+      etbl <- data.frame(
+        Subject = b$subject_code,
+        Electrode = elecs,
+        Selected = elecs %in% tbl$Electrode[tbl$Subject == b$subject_code]
+      )
+    }))
+    
+    
   } else if(!length(brain)) {
     # show message like "no brain exists"
     message('there is no brain data exists')
   } else {
     brain <- brain[[1]]
+    elecs <- brain$electrodes$raw_table$Electrode
+    all_electrodes <- data.frame(
+      Subject = brain$subject_code,
+      Electrode = elecs,
+      Selected = elecs %in% tbl$Electrode
+    )
   }
 
   
   brain$set_electrode_values(tbl)
+  brain$set_electrode_values(all_electrodes)
   
-  brain$plot(side_width = 160, side_shift = c(0,0), 
-             palettes = list('Cluster' = res$colors))
+  brain$plot(
+    side_width = 160, side_shift = c(0,0), 
+    palettes = list(
+      'Cluster' = res$colors,
+      'Selected' = c("black", '#1B9E77')
+    )
+  )
 }
 
 

@@ -8,7 +8,6 @@
 
 
 observeEvent(input$do_run, {
-  print('lalalala')#FIXME
   res = clustering_analysis()
   local_data$my_results = res
   
@@ -60,7 +59,8 @@ clustering_analysis <- function(){
   var_name = input$trial_selected
   
   # subset with only the selected ROI variable
-  roi_list <- c("VAR_IS_ROI_Hemisphere", "VAR_IS_ROI_freesurferlabel", "VAR_IS_ROI_Group")
+  roi_list <- c("VAR_IS_ROI_Hemisphere", "VAR_IS_ROI_freesurferlabel", 
+                "VAR_IS_ROI_Group")
   roi_var<- paste0('VAR_IS_ROI_',input$model_roi_variable)
   
   raw_table = raw_table[, !names(raw_table) %in% roi_list[!roi_list %in% roi_var]]
@@ -87,10 +87,16 @@ clustering_analysis <- function(){
 
     print(paste0('start data deformation... Group', ii))
     
-    sub = raw_table[raw_table$Condition %in% group_condition 
-                                            & raw_table$Time %within% input$time_window, ]
+    sub_plot =raw_table[raw_table$Condition %in% group_condition & 
+                          raw_table$Time %within% input$plot_time_window, ]
     
-    sub$Time = paste0(sub$Time, '_', ii)
+    sub = sub_plot[sub_plot$Time %within% input$time_window,]
+    
+    sub_plot$Time = paste0(sub_plot$Time, '_', ii)
+    
+    sub_time = paste0(sub$Time, '_',ii)
+    
+    
     
     fml <- Subject + Electrode + VAR_IS_ROI_freesurferlabel ~ Time
     fml[[2]][[3]] <- parse(text = roi_var)[[1]]
@@ -99,7 +105,7 @@ clustering_analysis <- function(){
    #FIXME
     collapsed_mean <- lapply(var_name, function(var){
       reshape2::dcast(
-          sub,
+          sub_plot,
           fml,
           fun.aggregate = mean, value.var = var
         )
@@ -118,22 +124,27 @@ clustering_analysis <- function(){
     return(list(
       collapsed_mean = merged,
       group_name = group_name,
-      group_index = ii
+      group_index = ii,
+      sub_time = sub_time
     ))
   })
   
   group_names = sapply(collapsed, '[[', 'group_name')#FIXME
   # merge(..., all=TRUE) will keep all the IDs, FALSE will be inner join
   
+  #showing progress message
   progress$inc("Merging collapsed data")
   
   merged = Reduce(function(a, b){
     # b <- collapsed[[1]]
     list(
       collapsed_mean = merge(a$collapsed_mean, b$collapsed_mean, all = FALSE, 
-                             by = c("Subject", 'Electrode',roi_var))
+                             by = c("Subject", 'Electrode',roi_var)),
+      sub_time = c(a$sub_time, b$sub_time)
     )
   }, collapsed, right = FALSE)
+  
+  
   collapsed = merged$collapsed_mean
   
   ## For merge(..., all=TRUE), there might be some cases where 
@@ -148,7 +159,7 @@ clustering_analysis <- function(){
   #' dd
   #' @noRd
   
-  indata = collapsed[, !names(collapsed) %in% c('Subject', 'Electrode', roi_var)]
+  indata = collapsed[, names(collapsed) %in% merged$sub_time]
   # baselined = baseline(
   #   power$subset(
   #     Trial=Trial %in% all_trials, Frequency = Frequency %within% input_frequencies,
@@ -171,9 +182,7 @@ clustering_analysis <- function(){
   # trial = module_tools$get_meta('trials')
   
   # list2env(as.list(..param_env), envir = globalenv())
-  # list2env(as.list(environment()), envir = globalenv())
-  
-  time_columns = names(indata)
+  # list2env(as.list(environment()), envir = globalenv()
 
   progress$inc("Running MDS on merged data")
   
@@ -192,6 +201,8 @@ clustering_analysis <- function(){
 
   if (input$check_scale) {#with or without 'input', what is the difference? 
     indata = t(scale(t(indata)))
+    collapsed[, !names(collapsed) %in% c('Subject', 'Electrode', roi_var)] <- 
+      t(scale(t(collapsed[, !names(collapsed) %in% c('Subject', 'Electrode', roi_var)])))
   }
   
   
@@ -217,9 +228,12 @@ clustering_analysis <- function(){
   
   #clusters = res$clusters_res 
   #indata = res$indata
-  cluster_mse <- lapply(sort(unique(clusters)), function(ci){
+  mse <- lapply(sort(unique(clusters)), function(ci){
     # rutabaga::collapse(indata[clusters == ci, , drop = FALSE], average = TRUE, keep = 2)
-     apply(indata[clusters == ci,,drop=FALSE], 2, rutabaga::m_se)
+     apply(collapsed[clusters == ci,
+                     !names(collapsed) %in% c('Subject', 'Electrode', roi_var),
+                     drop=FALSE], 
+           2, rutabaga::m_se)
     
     #cluster_mean = colMeans(indata[clusters == c0i, , drop = FALSE])
     
@@ -231,8 +245,7 @@ clustering_analysis <- function(){
     #rbind(cluster_mean, sqrt(total_var / total_df))
   })
   
-  #color pattern
-  #FIXME
+  #clusters color code
   colors = ravebuiltins::get_palette("Dark2")
    
    
@@ -258,14 +271,13 @@ clustering_analysis <- function(){
     clusters_res = clusters,
     cluster_table = cluster_table,
     roi = roi,
-    cluster_mse =  cluster_mse,
+    mse =  mse,
     input_nclusters = input$input_nclusters,
     #time_points = as.numeric(names(indata)),
     colors = colors,
     group_names = group_names,
     time_range = input$time_window,
-    time_columns = time_columns
-    
+    time_range_plot = input$plot_time_window
   ))
 }
 
