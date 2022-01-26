@@ -110,7 +110,7 @@ dendrogram_plot <- function() {
   
   shiny::validate(shiny::need('hclust' %in% class(local_data$cluster_method_output), message = 'Please press "Run Analysis" '))
   
-  labels = res$collapsed %$% paste0(Subject, Electrode)
+  #labels = res$collapsed %$% paste0(Subject, Electrode)
   
   n = length(labels)
   k = res$input_nclusters
@@ -118,7 +118,7 @@ dendrogram_plot <- function() {
   
   leafCol <- function(x,col){
     if(stats::is.leaf(x)){
-      attr(x,'label') <- labels[x]
+      #attr(x,'label') <- labels[x]
       attr(x, 'nodePar') <- list(lab.col = res$colors[res$clusters_res[x]],pch = 46,cex=0 )
       attr(x, "edgePar") <- list(col = res$colors[res$clusters_res[x]])
     }else{
@@ -179,21 +179,26 @@ dendrogram_plot <- function() {
     # legend('topleft', legend=paste0('clust', rev(runle$values)),
     #      cex=1, text.col = 1 + rev(runle$values), bty='n')
 
-  plot_signals2 <- function(signals, space, ylim1 = c(0, 1), ...){
-    space <- stats::quantile(signals, space, na.rm = TRUE) * 2
-    nr <- nrow(signals)
-    ylim0 <- range(seq_len(nr) * space + signals, na.rm = TRUE)
-    scale <- (ylim1[2] - ylim1[1]) / (ylim0[2] - ylim0[1])
-    space <- space * scale
-    signals <- (signals - ylim0[1]) * scale + ylim1[1]
-    
-    plot_clean(xlim = c(1, ncol(signals)), ...)
-    
-    plot_signals(signals = signals, space = space, space_mode = "asis", 
-                 new_plot = FALSE)
-  }
+  # plot_signals2 <- function(signals, space, ylim1 = c(0, 1), ...){
+  #   space <- stats::quantile(signals, space, na.rm = TRUE) * 2
+  #   nr <- nrow(signals)
+  #   ylim0 <- range(seq_len(nr) * space + signals, na.rm = TRUE)
+  #   scale <- (ylim1[2] - ylim1[1]) / (ylim0[2] - ylim0[1])
+  #   space <- space * scale
+  #   signals <- (signals - ylim0[1]) * scale + ylim1[1]
+  #   
+  #   plot_clean(xlim = c(1, ncol(signals)), ...)
+  #   
+  #   plot_signals(signals = signals, space = space, space_mode = "asis", 
+  #                new_plot = FALSE)
+  # }
+  # 
+  # plot_signals2(res$indata, space = 0.99, ylim = c(-1, n+2), ylim1 = c(0, n+1))
   
-  plot_signals2(res$indata, space = 0.99, ylim = c(-1, n+2), ylim1 = c(0, n+1))
+  plot_clean(xlim = c(0,1), ylim = c(0,90))
+  image(t(res$indata[order.dendrogram(dend),]),  y=1:89,
+        col= hcl.colors(100, palette = "BluYl",rev = TRUE),
+        yaxt = 'n',bty = 'n', xaxt= 'n', add = TRUE)
   
 }
 

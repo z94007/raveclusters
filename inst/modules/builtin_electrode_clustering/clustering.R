@@ -214,7 +214,7 @@ clustering_analysis <- function(){
   #input = ...input
   dis = dist(indata, method = input$distance_method)
   if (input$input_method == "H-Clust"){
-    hcl = stats::hclust(dis, method = 'ward.D')
+    hcl = stats::hclust(dis, method = 'ward.D2')
     local_data$cluster_method_output = hcl
     clusters <- stats::cutree(hcl, k = n_clust)
   } else if (input$input_method == "PAM") {

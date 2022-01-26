@@ -90,7 +90,7 @@ define_input_condition_groups('input_groups', label = 'Condition Group')
 
 define_input(
   definition = numericInput(inputId = 'input_nclusters', label = 'Number of Clusters', 
-                            value = 2, min = 1, max = 1e3, step = 1)
+                            value = 2, min = 1, max = 12, step = 1)
 )
 
 define_input(
