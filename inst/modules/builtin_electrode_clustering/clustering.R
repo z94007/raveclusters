@@ -233,7 +233,7 @@ clustering_analysis <- function(){
      apply(collapsed[clusters == ci,
                      !names(collapsed) %in% c('Subject', 'Electrode', roi_var),
                      drop=FALSE], 
-           2, rutabaga::m_se)
+           2, dipsaus::mean_se)
     
     #cluster_mean = colMeans(indata[clusters == c0i, , drop = FALSE])
     
