@@ -110,7 +110,7 @@ dendrogram_plot <- function() {
   
   shiny::validate(shiny::need('hclust' %in% class(local_data$cluster_method_output), message = 'Please press "Run Analysis" '))
   
-  #labels = res$collapsed %$% paste0(Subject, Electrode)
+  labels = res$collapsed %$% paste0(Subject, Electrode)
   
   n = length(labels)
   k = res$input_nclusters
@@ -118,7 +118,7 @@ dendrogram_plot <- function() {
   
   leafCol <- function(x,col){
     if(stats::is.leaf(x)){
-      #attr(x,'label') <- labels[x]
+      attr(x,'label') <- labels[x]
       attr(x, 'nodePar') <- list(lab.col = res$colors[res$clusters_res[x]],pch = 46,cex=0 )
       attr(x, "edgePar") <- list(col = res$colors[res$clusters_res[x]])
     }else{
@@ -162,7 +162,7 @@ dendrogram_plot <- function() {
   class(dend) <- 'dendrogram'
   
   #plot the horizontal dendrogram
-  plot(dend, las = 1,horiz = TRUE, yaxt='n',#remove the y axis and labels
+  plot(dend,las = 1,horiz = TRUE, yaxt='n',#remove the y axis and labels
        ylim = c(0, n+1))
 
   
@@ -195,8 +195,8 @@ dendrogram_plot <- function() {
   # 
   # plot_signals2(res$indata, space = 0.99, ylim = c(-1, n+2), ylim1 = c(0, n+1))
   
-  plot_clean(xlim = c(0,1), ylim = c(0,90))
-  image(t(res$indata[order.dendrogram(dend),]),  y=1:89,
+  plot_clean(xlim = c(0,1), ylim = c(0,n+1))
+  image( t(res$indata[order.dendrogram(dend),]),  y=1:n,
         col= hcl.colors(100, palette = "BluYl",rev = TRUE),
         yaxt = 'n',bty = 'n', xaxt= 'n', add = TRUE)
   
@@ -224,14 +224,18 @@ optimal_cluster_number_plot <- function(){
   
   op_res <- lapply(methods, function(x){
     factoextra::fviz_nbclust(res$indata,FUNcluster = clustfun, method =x, 
-                             k.max = ceiling(dim(res$indata)[1]/2))
+                             diss = dist(res$indata,method = input$distance_method),
+                             k.max = 8)
   })
   junk <- lapply(op_res, function(x){
-    plot(x$data$y, pch = 20, type = 'o', xlab = x$labels$x, ylab =x$labels$y, lwd=2,las = 1)
+    plot(x$data$y, pch = 12, type = 'o', xlab = x$labels$x, ylab =x$labels$y, lwd=2,las = 1)
     lst <- sort(x$data$y, index.return=TRUE, decreasing=TRUE)
     if(!is.null(x$labels$xintercept)){
       points(lst$ix[1:3],lst$x[1:3],col = 'red',pch =19)
-      legend('topright', 'suggested number of clusters', col = 'red',pch =19, bty='n', text.font = 2)
+      legend('topright', sprintf('%s %s','suggested number of clusters',
+                                 paste(lst$ix[1:3], collapse = ', ')),  
+             bty='n', text.font = 2)
+      #the return value of paste(1,2,3) is different from paste(c(1:3))
       }
     }
   )
@@ -360,6 +364,8 @@ cluster_plot <-  function(separate = FALSE, cex.main = shiny_cex.main){
     } else {
       y_label = NULL
     }
+    
+    
     
     mtext(paste0(y_label,'% change Amplitude'), side = 2, line = 2,cex = 1.5)
     mtext('Time(s)', side = 1, line = 2,cex = 1.5)
