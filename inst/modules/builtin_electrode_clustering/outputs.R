@@ -327,7 +327,9 @@ cluster_plot <-  function(separate = FALSE, cex.main = shiny_cex.main){
     
     rect(x_rect[1], y_rect[1],x_rect[2],y_rect[2],
          col = rgb(red = 1, green = 0, blue = 0, alpha = 0.05), border = NA)
-    legend(x_rect[1],y_rect[2],'Analysis', text.col = 'red', bty='n', 
+    x_rect[1]+(x_rect[2]-x_rect[1])*.7
+    legend(x_rect[1]+(x_rect[2]-x_rect[1])*.7,
+           y_rect[2],'Analysis', text.col = 'red', bty='n', 
            text.font = 1,)#FIXME#the location of this should not overlap with the legend of group conditon
     
     # plot the lines 
@@ -359,15 +361,16 @@ cluster_plot <-  function(separate = FALSE, cex.main = shiny_cex.main){
     )
     
     #label of y-axis
-    if(input$check_scale){
-      y_label = 'z-scored'
-    } else {
-      y_label = NULL
-    }
+    # if(input$check_scale){
+    #   y_label = 'z-scored'
+    # } else {
+    #   y_label = NULL
+    # }
+    # 
     
+    event_name <- head(strsplit(input$trial_selected,'_')[[1]],-2)
     
-    
-    mtext(paste0(y_label,'% change Amplitude'), side = 2, line = 2,cex = 1.5)
+    mtext(paste(event_name, collapse = ' '), side = 2, line = 2,cex = 1.5)
     mtext('Time(s)', side = 1, line = 2,cex = 1.5)
     # mtext('z-score % change Amplitude', side = 3, line = 0, at= 0)
     
