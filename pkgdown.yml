@@ -3,7 +3,7 @@ pkgdown: 2.0.2
 pkgdown_sha: ~
 articles:
   A_Quick_Start: A_Quick_Start.html
-last_built: 2022-01-26T23:02Z
+last_built: 2022-01-27T18:44Z
 urls:
   reference: https://z94007.github.io/raveclusters/reference
   article: https://z94007.github.io/raveclusters/articles
