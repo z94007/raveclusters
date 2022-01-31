@@ -87,6 +87,7 @@ clustering_analysis <- function(){
 
     print(paste0('start data deformation... Group', ii))
     
+    #plot data
     sub_plot =raw_table[raw_table$Condition %in% group_condition & 
                           raw_table$Time %within% input$plot_time_window, ]
     
@@ -95,8 +96,6 @@ clustering_analysis <- function(){
     sub_plot$Time = paste0(sub_plot$Time, '_', ii)
     
     sub_time = paste0(sub$Time, '_',ii)
-    
-    
     
     fml <- Subject + Electrode + VAR_IS_ROI_freesurferlabel ~ Time
     fml[[2]][[3]] <- parse(text = roi_var)[[1]]
@@ -109,17 +108,14 @@ clustering_analysis <- function(){
           fml,
           fun.aggregate = mean, value.var = var
         )
-    })
+    }
+    )
     
     merged <- Reduce(function(a, b){
       # b <- collapsed[[1]]
       merge(a, b, all = FALSE, 
             by = c("Subject", 'Electrode',roi_var))
     }, collapsed_mean)
-    
-
- 
-
 
     return(list(
       collapsed_mean = merged,
@@ -129,6 +125,53 @@ clustering_analysis <- function(){
     ))
   })
   
+  
+  # get the baseline mean
+  baseline = lapply(seq_along(input$input_groups), function( ii ){
+    group = input$input_groups[[ ii ]]
+    
+    group_name = group$group_name
+    
+    if(is.null(group_name) && group_name == ''){
+      group_name = sprintf('Group %d', ii)
+    }
+    
+    group_condition = group$group_conditions
+    
+    baseline_raw = raw_table[raw_table$Condition %in% group_condition &
+                raw_table$Time %within% input$baseline_time, ]
+    
+    fml <- Subject + Electrode + VAR_IS_ROI_freesurferlabel ~ Time
+    fml[[2]][[3]] <- parse(text = roi_var)[[1]]
+    
+    baseline_mean <- lapply(var_name, function(var){
+      reshape2::dcast(
+        baseline_raw,
+        fml,
+        fun.aggregate = mean, value.var = var
+      )
+    }
+    )
+    
+    return(baseline_mean)
+
+  })
+
+  baseline_merged = Reduce(function(a, b){
+    # b <- collapsed[[1]]
+    
+    baseline_mean = merge(a, b, all = FALSE, 
+                           by = c("Subject", 'Electrode',roi_var))
+    baseline_mean
+    
+  }, baseline, right = FALSE)
+
+  baseline_mean_indata <- baseline_merged[,!names(baseline_merged) %in% c("Subject", 'Electrode',roi_var)]
+  baseline_mean <- rowMeans(baseline_mean_indata)
+  baseline_sd <- apply(baseline_mean_indata,1,sd)
+  
+  
+
   group_names = sapply(collapsed, '[[', 'group_name')#FIXME
   # merge(..., all=TRUE) will keep all the IDs, FALSE will be inner join
   
@@ -186,6 +229,14 @@ clustering_analysis <- function(){
 
   progress$inc("Running MDS on merged data")
   
+  #z-score
+  if (input$check_scale) {#with or without 'input', what is the difference? 
+    
+    indata = t(scale(t(indata),center = baseline_mean, baseline_sd))
+    collapsed[, !names(collapsed) %in% c('Subject', 'Electrode', roi_var)] <- 
+      t(scale(t(collapsed[, !names(collapsed) %in% c('Subject', 'Electrode', roi_var)])))
+  }
+  
   #MDS
   if( ncol(indata) <= 2 ){
     mds_res = NULL
@@ -199,11 +250,7 @@ clustering_analysis <- function(){
   
 
 
-  if (input$check_scale) {#with or without 'input', what is the difference? 
-    indata = t(scale(t(indata)))
-    collapsed[, !names(collapsed) %in% c('Subject', 'Electrode', roi_var)] <- 
-      t(scale(t(collapsed[, !names(collapsed) %in% c('Subject', 'Electrode', roi_var)])))
-  }
+
   
   
   #clustering
@@ -214,7 +261,7 @@ clustering_analysis <- function(){
   #input = ...input
   dis = dist(indata, method = input$distance_method)
   if (input$input_method == "H-Clust"){
-    hcl = stats::hclust(dis, method = 'ward.D2')
+    hcl = stats::hclust(dis, method = input$hclust_method)
     local_data$cluster_method_output = hcl
     clusters <- stats::cutree(hcl, k = n_clust)
   } else if (input$input_method == "PAM") {

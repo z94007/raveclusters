@@ -58,6 +58,13 @@ define_input(
   )
 )
 
+define_input(
+  definition = sliderInput(inputId = 'baseline_time', label = 'Baseline time for z-score', 
+                           min = -1, 
+                           max= 2,
+                           value = c(-1,0),
+                           step = 0.01)
+)
 
 # define_input(
 #   definition = textInput(inputId = 'text_electrode', label = 'Electrode Not loaded'),
@@ -134,7 +141,9 @@ define_input(
 
 define_input(
   definition = selectInput(inputId = 'distance_method', label = 'Clustering Distance Measurement',
-                           choices = c('euclidean', 'maximum',"manhattan", "canberra", "minkowski"), selected = NULL),
+                           choices = c('euclidean', 'maximum',"manhattan", "canberra", 
+                                       "minkowski",'DTW'),
+                           selected = NULL),
   init_args = c('selected'),
   init_expr = {
     selected = cache_input('distance_method', 'manhattan')
@@ -147,6 +156,18 @@ define_input(
   init_args = c('selected'),
   init_expr = {
     selected = cache_input('mds_distance_method', 'manhattan')
+  }
+)
+
+define_input(
+  definition = selectInput(inputId = 'hclust_method', 
+                           label = 'H-Clust agglomeration method',
+                           choices = c( "ward.D2", "single", "complete", 
+                                        "average", "mcquitty"),
+                           selected = NULL),
+  init_args = c('selected'),
+  init_expr = {
+    selected = cache_input('hclust_method', 'ward.D2')
   }
 )
 
@@ -207,10 +228,12 @@ input_layout = list(
     'time_window',
     'plot_time_window',
     'input_method',
+    'hclust_method',
     c('input_nclusters','distance_method' ),
     'mds_distance_method',
     c('check_scale',
     'op_run'),
+    'baseline_time',
     'do_run'
   ),
   'Export Settings' = list(
