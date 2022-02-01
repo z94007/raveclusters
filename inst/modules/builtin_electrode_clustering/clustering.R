@@ -234,7 +234,8 @@ clustering_analysis <- function(){
     
     indata = t(scale(t(indata),center = baseline_mean, baseline_sd))
     collapsed[, !names(collapsed) %in% c('Subject', 'Electrode', roi_var)] <- 
-      t(scale(t(collapsed[, !names(collapsed) %in% c('Subject', 'Electrode', roi_var)])))
+      t(scale(t(collapsed[, !names(collapsed) %in% c('Subject', 'Electrode', roi_var)]),
+              center = baseline_mean, baseline_sd))
   }
   
   #MDS
