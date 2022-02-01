@@ -375,7 +375,14 @@ cluster_plot <-  function(separate = FALSE, cex.main = shiny_cex.main){
     
     event_name <- head(strsplit(input$trial_selected,'_')[[1]],-1)
     
-    mtext(paste0(paste(event_name, collapse = ' '), ylab_scale), side = 2, line = 2,cex = 1.5)
+    if (input$check_scale) {
+      mtext(paste0(paste(event_name, collapse = ' '), ' (z-scored)'), 
+            side = 2, line = 2,cex = 1.5)
+    }else{
+      mtext(paste(event_name, collapse = ' '), 
+            side = 2, line = 2,cex = 1.5)
+    }
+    
     mtext('Time(s)', side = 1, line = 2,cex = 1.5)
     # mtext('z-score % change Amplitude', side = 3, line = 0, at= 0)
     
