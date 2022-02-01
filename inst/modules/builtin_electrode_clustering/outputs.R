@@ -370,7 +370,7 @@ cluster_plot <-  function(separate = FALSE, cex.main = shiny_cex.main){
     if (input$check_scale) {
       ylab_scale = ' (z-scored)'
     }else{
-      ylab_scle = ''
+      ylab_scle = " "
     }
     
     event_name <- head(strsplit(input$trial_selected,'_')[[1]],-1)
