@@ -239,25 +239,19 @@ clustering_analysis <- function(){
   }
   
   #MDS
-  if( ncol(indata) <= 2 ){
+  if(ncol(indata) <= 2 ){
     mds_res = NULL
-  }else{
-    # pca_res <- Rtsne::Rtsne(t(coll),dims = 2,perplexity = length(preload_info$electrodes) / 5, verbose = T, max_iter =20)
-    # pca_res <- prcomp(t(coll))
-    if (input$mds_distance_method = '1 - correlation') {
+    }else if(input$mds_distance_method == '1 - correlation') {
       dis = as.dist(1-cor(t(indata)))
+      mds_res = cmdscale(dis, k=2)
     }else{
       dis = dist(indata, method = input$mds_distance_method)
+      mds_res = cmdscale(dis, k=2)
     }
-    
-    mds_res = cmdscale(dis, k=2)
-    
-  }
   
 
 
 
-  
   
   #clustering
   progress$inc('start clustering analysis')
@@ -265,8 +259,8 @@ clustering_analysis <- function(){
   n_clust = min(input$input_nclusters, nrow(collapsed))
   
   #get the distance metric for clustering
-  
-  if (input$distance_method = '1 - correlation') {
+
+  if (isTRUE(input$distance_method == '1 - correlation')) {
     dis = as.dist(1-cor(t(indata)))
   }else{
     dis = dist(indata, method = input$distance_method)
@@ -332,6 +326,7 @@ clustering_analysis <- function(){
     cluster_table = cluster_table,
     roi = roi,
     mse =  mse,
+    dis = dis,
     input_nclusters = input$input_nclusters,
     #time_points = as.numeric(names(indata)),
     colors = colors,

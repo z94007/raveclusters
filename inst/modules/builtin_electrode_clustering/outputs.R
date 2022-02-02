@@ -57,8 +57,9 @@ mds_plot <- function(){
   
   rave::set_rave_theme()
   
-  mds_res = cmdscale(dist(res$indata, method = input$mds_distance_method), k=2)
+  #mds_res = cmdscale(dist(res$indata, method = input$mds_distance_method), k=2)
   # ravebuiltins:::set_palette_helper
+  
   assign('res', res, envir = globalenv())
   
   #colors
@@ -67,8 +68,8 @@ mds_plot <- function(){
   par(mfrow = c(1,1))
 
   pcs = 1:2#why???
-  plot(mds_res[,pcs], type = 'n',xlab = '', ylab = '')
-  text(mds_res[,pcs], labels = paste0(collapsed_data$Subject,collapsed_data$Electrode),
+  plot(res$mds_res[,pcs], type = 'n',xlab = '', ylab = '')
+  text(res$mds_res[,pcs], labels = paste0(collapsed_data$Subject,collapsed_data$Electrode),
        col = res$colors[res$clusters_res])
   legend('topright', sprintf('Cluster %d', seq_along(unique(res$clusters_res))),
                              bty='n', text.font = 2, text.col = res$colors[seq_along(unique(res$clusters_res))])
@@ -224,7 +225,7 @@ optimal_cluster_number_plot <- function(){
   
   op_res <- lapply(methods, function(x){
     factoextra::fviz_nbclust(res$indata,FUNcluster = clustfun, method =x, 
-                             diss = dist(res$indata,method = input$distance_method),
+                             diss = res$dis,
                              k.max = 8)
   })
   junk <- lapply(op_res, function(x){
