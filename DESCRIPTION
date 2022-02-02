@@ -29,7 +29,8 @@ Imports:
     threeBrain,
     rutabaga,
     dendextend (>= 1.15.1),
-    factoextra (>= 1.0.7)
+    factoextra (>= 1.0.7),
+    dtw (>= 1.22.3)
 Suggests:
     rstudioapi (>= 0.9.0),
     knitr,

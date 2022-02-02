@@ -39,10 +39,6 @@ output$export_pdf <- downloadHandler(
 
 
 
-
-# local_data = ...local_data
-# input = ...input
-
 mds_plot <- function(){
   # rave::rave_context()
   

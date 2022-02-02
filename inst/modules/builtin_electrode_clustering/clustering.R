@@ -262,6 +262,8 @@ clustering_analysis <- function(){
 
   if (isTRUE(input$distance_method == '1 - correlation')) {
     dis = as.dist(1-cor(t(indata)))
+  }else if(isTRUE(input$distance_method == 'DTW')){
+    dis =as.dist(dtwDist(indata))
   }else{
     dis = dist(indata, method = input$distance_method)
   }

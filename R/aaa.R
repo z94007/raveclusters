@@ -14,7 +14,7 @@
 #' @import rutabaga
 #' @import dipsaus
 #' @import graphics
-#' @import Rtsne
+#' @importFrom dtw dtwDist
 #' @importFrom magrittr %>%
 #' @import stringr
 #' @importFrom magrittr %<>%
@@ -23,6 +23,7 @@
 #' @importFrom magrittr extract
 #' @importFrom magrittr set_rownames
 #' @importFrom magrittr equals
+
 
 NULL
 
