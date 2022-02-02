@@ -114,7 +114,7 @@ define_input(
                 min = -1, 
                 max= 2,
                 value = c(0,1.0),
-                step = 0.01)
+                step = 0.1)
   # }else{
   #   sliderInput(inputId = 'time_window', label = 'Time Window', 
   #               min = min(local_data$analysis_data_raw$data$Time), 
@@ -131,7 +131,7 @@ define_input(
                            min = -1, 
                            max= 2,
                            value = c(0,1.0),
-                           step = 0.01)
+                           step = 0.1)
 )
 
 
@@ -142,7 +142,7 @@ define_input(
 define_input(
   definition = selectInput(inputId = 'distance_method', label = 'Clustering Distance Measurement',
                            choices = c('euclidean', 'maximum',"manhattan", "canberra", 
-                                       "minkowski",'DTW'),
+                                       "minkowski",  '1 - correlation','DTW'),
                            selected = NULL),
   init_args = c('selected'),
   init_expr = {
@@ -152,7 +152,8 @@ define_input(
 
 define_input(
   definition = selectInput(inputId = 'mds_distance_method',label = 'MDS Distance Measurement',
-                           choices = c('euclidean', 'maximum',"manhattan","canberra"), selected = NULL),
+                           choices = c('euclidean', 'maximum', '1 - correlation',
+                                       "manhattan","canberra"), selected = NULL),
   init_args = c('selected'),
   init_expr = {
     selected = cache_input('mds_distance_method', 'manhattan')

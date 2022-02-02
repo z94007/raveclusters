@@ -244,8 +244,13 @@ clustering_analysis <- function(){
   }else{
     # pca_res <- Rtsne::Rtsne(t(coll),dims = 2,perplexity = length(preload_info$electrodes) / 5, verbose = T, max_iter =20)
     # pca_res <- prcomp(t(coll))
+    if (input$mds_distance_method = '1 - correlation') {
+      dis = as.dist(1-cor(t(indata)))
+    }else{
+      dis = dist(indata, method = input$mds_distance_method)
+    }
     
-    mds_res = cmdscale(dist(indata, method = input$mds_distance_method), k=2)
+    mds_res = cmdscale(dis, k=2)
     
   }
   
@@ -259,8 +264,15 @@ clustering_analysis <- function(){
   
   n_clust = min(input$input_nclusters, nrow(collapsed))
   
-  #input = ...input
-  dis = dist(indata, method = input$distance_method)
+  #get the distance metric for clustering
+  
+  if (input$distance_method = '1 - correlation') {
+    dis = as.dist(1-cor(t(indata)))
+  }else{
+    dis = dist(indata, method = input$distance_method)
+  }
+  
+  
   if (input$input_method == "H-Clust"){
     hcl = stats::hclust(dis, method = input$hclust_method)
     local_data$cluster_method_output = hcl
