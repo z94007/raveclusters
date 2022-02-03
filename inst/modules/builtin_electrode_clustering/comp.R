@@ -323,11 +323,18 @@ define_output(
 )
 
 define_output(
-  definition = visNetwork::visNetworkOutput('visnet'),
+  definition = customizedUI("visnet_wrapper"), 
   title = 'How H-Clust merges',
   width = 12L,
   order = 3
 )
+
+# define_output(
+#   definition = visNetwork::visNetworkOutput('visnet'),
+#   title = 'How H-Clust merges',
+#   width = 12L,
+#   order = 3
+# )
 
 # if (input_method == 'H-Clust' && !is.null(local_data$my_resultsmds_res)) {
 #   plot()

@@ -99,3 +99,12 @@ observe({
   
   
 })
+
+visnet_wrapper <- function(){
+  session <- shiny::getDefaultReactiveDomain()
+  visNetwork::visNetworkOutput(session$ns('visnet'))
+}
+output$visnet <- visNetwork::renderVisNetwork({
+  visnet()
+})
+
