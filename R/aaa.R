@@ -23,6 +23,7 @@
 #' @importFrom magrittr extract
 #' @importFrom magrittr set_rownames
 #' @importFrom magrittr equals
+#' @import visNetwork
 
 
 NULL

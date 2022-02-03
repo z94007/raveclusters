@@ -54,7 +54,7 @@ define_input_analysis_data_fst(
 
 define_input(
   definition = checkboxInput(inputId = 'check_scale', label = 'Z-score data',
-                             value = FALSE
+                             value = TRUE
   )
 )
 
@@ -187,6 +187,7 @@ define_input(
                                            type = 'primary', width = '100%')
 )
 
+
 define_input(
   definition = customizedUI('graph_export')
 )
@@ -237,6 +238,7 @@ input_layout = list(
     'baseline_time',
     'do_run'
   ),
+  
   'Export Settings' = list(
     'graph_export'
   )
@@ -318,6 +320,13 @@ define_output(
   title = 'Optimal number of clusters',
   width = 8L,
   order = 2.16
+)
+
+define_output(
+  definition = visNetwork::visNetworkOutput('visnet'),
+  title = 'How H-Clust merges',
+  width = 12L,
+  order = 3
 )
 
 # if (input_method == 'H-Clust' && !is.null(local_data$my_resultsmds_res)) {
