@@ -60,7 +60,7 @@ clustering_analysis <- function(){
   
   # subset with only the selected ROI variable
   roi_list <- c("VAR_IS_ROI_Hemisphere", "VAR_IS_ROI_freesurferlabel", 
-                "VAR_IS_ROI_Group")
+                "VAR_IS_ROI_Group", "VAR_IS_ROI_Block")
   roi_var<- paste0('VAR_IS_ROI_',input$model_roi_variable)
   
   raw_table = raw_table[, !names(raw_table) %in% roi_list[!roi_list %in% roi_var]]
@@ -100,8 +100,6 @@ clustering_analysis <- function(){
     fml <- Subject + Electrode + VAR_IS_ROI_freesurferlabel ~ Time
     fml[[2]][[3]] <- parse(text = roi_var)[[1]]
     
-      
-   #FIXME
     collapsed_mean <- lapply(var_name, function(var){
       reshape2::dcast(
           sub_plot,

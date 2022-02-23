@@ -2,6 +2,7 @@
 
 export(convert_cluster_table)
 export(dev_raveclusters)
+export(table_apply_roi)
 import(dipsaus)
 import(graphics)
 import(rave)

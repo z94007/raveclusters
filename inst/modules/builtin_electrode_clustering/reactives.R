@@ -102,7 +102,7 @@ observe({
 
 visnet_wrapper <- function(){
   session <- shiny::getDefaultReactiveDomain()
-  visNetwork::visNetworkOutput(session$ns('visnet'))
+  visNetwork::visNetworkOutput(session$ns('visnet'), height = "80vh")
 }
 output$visnet <- visNetwork::renderVisNetwork({
   visnet()

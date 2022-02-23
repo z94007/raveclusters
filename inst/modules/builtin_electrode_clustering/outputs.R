@@ -53,7 +53,6 @@ visnet <- function(){
   )
   
   raveio::catgl("Rendering [visnet]")
-  print(res)
   
   # function(indata, dist, ...){
   #   
@@ -148,6 +147,9 @@ visnet <- function(){
                           drop=FALSE], 
             2, rutabaga::m_se)})
     
+    label = lapply(sort(unique(clusters)), function(ci){
+      sum(clusters == ci)
+    })
     colors = ravebuiltins::get_palette("Dark2")
     
     
@@ -201,6 +203,8 @@ visnet <- function(){
           
         })
         
+        legend('topleft',legend = paste('#elec :', label[[ii]]), bty='n', cex = 4)
+        
         
       }
       
@@ -215,6 +219,7 @@ visnet <- function(){
   image <- sapply(img, function(x){
     base64enc::dataURI(file = x)
   })
+  unlink(image_dir, recursive = TRUE)
   
   node_df <- data.frame(
     id = node_ids,
@@ -226,13 +231,14 @@ visnet <- function(){
   )
   edge_df <- as.data.frame(do.call('rbind', edges))
   names(edge_df) <- c("from", "to", "label")
-  edge_df$label <- as.character(edge_df$label)
+  edge_df <- edge_df[,c('from','to')]
+  #edge_df$label <- as.character(edge_df$label)
   
   
   visNetwork(node_df, edge_df, width = "100%", height = "100vh") %>% 
     visNodes(shapeProperties = list(useBorderWithImage = FALSE), size = 64) %>%
     visEdges(arrows = "to") %>% 
-    visHierarchicalLayout(direction = "UD", nodeSpacing = 150, treeSpacing = 400,
+    visHierarchicalLayout(direction = "LR", nodeSpacing = 150, treeSpacing = 400,
                           levelSeparation = 200, 
                           sortMethod = "directed") %>% 
     visInteraction(dragNodes = FALSE, zoomSpeed = 0.1) %>% 
@@ -522,7 +528,7 @@ cluster_plot <-  function(separate = FALSE, cex.main = shiny_cex.main){
     
     #plot the rectangle of analysis window
     x_rect <- res$time_range
-    y_rect <- range(yaxi)
+    y_rect <- yrange
     
     rect(x_rect[1], y_rect[1],x_rect[2],y_rect[2],
          col = rgb(red = 1, green = 0, blue = 0, alpha = 0.05), border = NA)
