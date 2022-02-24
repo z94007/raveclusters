@@ -1,0 +1,43 @@
+new_input: new_default_value
+input_groups:
+- group_name: A
+  group_conditions:
+  - last_a
+  - know_a
+  - meat_a
+  - drive_a
+- group_name: V
+  group_conditions:
+  - last_v
+  - know_v
+  - meat_v
+  - drive_v
+- group_name: AV
+  group_conditions:
+  - last_av
+  - know_av
+  - meat_av
+  - drive_av
+source_files: YAK_demo_export-20210525-082018.fst
+baseline_time:
+- -1.0
+- 0.0
+project_name: demo
+distance_method: manhattan
+hclust_method: ward.D2
+roi_options:
+  variable: Hemisphere
+  roi_ignore_gyrus_sulcus: no
+  roi_ignore_hemisphere: no
+analysis_event: Trial_Onset
+input_nclusters: 3.0
+input_method: H-Clust
+plot_time_window:
+- 0.0
+- 1.5
+check_scale: 'TRUE'
+filter_by_roi: right
+baseline_method: z_score_Amplitude
+time_window:
+- 0.0
+- 0.6

@@ -56,7 +56,7 @@ clustering_analysis <- function(){
   
   
   #var_name = names(raw_table)[3]
-  var_name = input$trial_selected
+  var_name = input$trial_selected[[1]]
   
   # subset with only the selected ROI variable
   roi_list <- c("VAR_IS_ROI_Hemisphere", "VAR_IS_ROI_freesurferlabel", 
@@ -142,13 +142,19 @@ clustering_analysis <- function(){
     fml <- Subject + Electrode + VAR_IS_ROI_freesurferlabel ~ Time
     fml[[2]][[3]] <- parse(text = roi_var)[[1]]
     
-    baseline_mean <- lapply(var_name, function(var){
-      reshape2::dcast(
-        baseline_raw,
-        fml,
-        fun.aggregate = mean, value.var = var
-      )
-    }
+    # baseline_mean <- lapply(var_name, function(var){
+    #   reshape2::dcast(
+    #     baseline_raw,
+    #     fml,
+    #     fun.aggregate = mean, value.var = var
+    #   )
+    # }
+    # )
+    
+    baseline_mean <- reshape2::dcast(
+      baseline_raw,
+      fml,
+      fun.aggregate = mean, value.var = var_name
     )
     
     return(baseline_mean)
