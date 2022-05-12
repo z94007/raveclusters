@@ -46,7 +46,7 @@ clustering_analysis <- function(){
   #local_data = ...local_data
   #input = ...input
   
-  progress = rave::progress("Run clustering", max = 5)
+  progress = progress("Run clustering", max = 5)
   on.exit({
     progress$close()
   })
@@ -277,10 +277,11 @@ clustering_analysis <- function(){
     hcl = stats::hclust(dis, method = input$hclust_method)
     local_data$cluster_method_output = hcl
     clusters <- stats::cutree(hcl, k = n_clust)
-  } else if (input$input_method == "PAM") {
+  } else if (input$input_method == "K-Medois") {
     #km <- kmeans(indata, centers = n_clust,iter.max = 100, )
     #clusters <- km$cluster
-    km <- cluster::pam(dis, k = n_clust,  cluster.only = TRUE, keep.data = FALSE, 
+    km <- cluster::pam(dis, k = n_clust,  diss = TRUE,
+                       cluster.only = TRUE, keep.data = FALSE, 
                        keep.diss = FALSE)
     local_data$cluster_method_output = km
     clusters <- km

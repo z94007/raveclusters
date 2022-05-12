@@ -61,9 +61,9 @@ define_input(
 define_input(
   definition = sliderInput(inputId = 'baseline_time', label = 'Baseline time for z-score', 
                            min = -1, 
-                           max= 2,
+                           max= 3,
                            value = c(-1,0),
-                           step = 0.01)
+                           step = 0.1)
 )
 
 # define_input(
@@ -102,7 +102,7 @@ define_input(
 
 define_input(
   definition = selectInput(inputId = 'input_method', label = 'Clustering Method',
-                           choices = c('H-Clust', 'PAM'), selected = NULL),
+                           choices = c('H-Clust', 'K-Medois'), selected = NULL),
   init_args = c('selected'),
   init_expr = {
     selected = cache_input('input_method', 'H-Clust')

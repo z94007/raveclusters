@@ -422,7 +422,7 @@ optimal_cluster_number_plot <- function(){
   methods = c('silhouette','wss')
   if (input$input_method == "H-Clust"){
     clustfun = factoextra::hcut
-  } else if (input$input_method == "PAM") {
+  } else if (input$input_method == "K-Medois") {
     clustfun = cluster::pam
   }
   par(mfrow= c(1,2))

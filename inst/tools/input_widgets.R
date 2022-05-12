@@ -532,7 +532,7 @@ define_input_analysis_data_csv <- function(
           print('Observe input_btn')
           source_files = input[[!!input_selector]]
           search_paths = .local_data$search_paths
-          progress = rave::progress('Loading analysis', max = length(source_files) + 1)
+          progress = progress('Loading analysis', max = length(source_files) + 1)
           on.exit({ progress$close() })
           
           progress$inc('Checking files...')
@@ -757,7 +757,7 @@ define_input_analysis_data_fst <- function(
           print('Observe input_btn')
           source_files = input[[!!input_selector]]
           search_paths = .local_data$search_paths
-          progress = rave::progress('Loading analysis', max = length(source_files) + 1)
+          progress = progress('Loading analysis', max = length(source_files) + 1)
           on.exit({ progress$close() })
           
           progress$inc('Checking files...')
