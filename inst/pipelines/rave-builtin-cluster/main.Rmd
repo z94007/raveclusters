@@ -1,5 +1,5 @@
 ---
-title: "RAVE Pipeline Markdown Template"
+title: "RAVE-Cluster Pipeline Documentation"
 output:
   html_document: default
   pdf_document: default
@@ -23,98 +23,33 @@ if(FALSE){
 }
 ```
 
-
+Let's start by printing the summary of this project
 
 ```{rave load_project, language = "R", export = "project"}
 library(raveio)
 project <- raveio::as_rave_project(project = project_name)
+project
 ```
 
+The next step is enter the project export folder and load data files exported by `Power Explorer` module. The folder can be found inside of `project$group_path("power_explorer")`, named `exports`. Package function `import_configurations (raveclusters)` is designed to load these data.
 
-```{rave get_input_file_meta_information, language = "R", export = "source_metas"}
+The data exported by `Power Explorer` are data frames containing power for each trial, time point, and electrode. The data is too large and might exhaust the computer's memory. Function `import_configurations` internally collapses the data frame by condition, grouping by `Condition`, `Time`, `Electrode`, `Subject`, and calculate mean power (`Pct_Change_xxx`, `z_score_xxx`, `decibel_xxx`), and generate trial count (column count)
+
+```{rave load_data, language = "R", export = "source_data"}
 # get the exported path of power explorer
-search_paths <- project$group_path("power_explorer")
+search_paths <- file.path(
+  project$group_path("power_explorer"),
+  "exports"
+)
+source_data <- raveclusters::import_configurations(
+  search_paths = search_paths, 
+  file_names = source_files)
 
-find_source = function(search_paths, fname){
-  fpaths = file.path(search_paths, 'exports',fname)
-  fexists = file.exists(fpaths)
-  if(!any(fexists)){ return(NULL) }
-  return(fpaths[which(fexists)[1]])
-}
-
-source_metas = lapply(source_files, function(fpath){
-  fpath = find_source(search_paths, fpath)
-  if( is.null(fpath) ){ return(NULL) }
-  dat <- fst::read_fst(fpath, from = 1, to = 1)
-  # read.csv( fpath , header = TRUE, nrows = 1)
-  list(
-    fpath = fpath,
-    header = names(dat)
-  )
-})
-source_metas = dipsaus::drop_nulls(source_metas)
+print(names(source_data))
+source_data$data
 ```
 
-
-```{rave load_input_files, language = "R", export = "source_data"}
-library(rutabaga)
-headers = unique(unlist(lapply(source_metas, '[[', 'header')))
-tbls = dipsaus::drop_nulls(lapply(source_metas, function(x){
-  
-  print('trying to load ' %&% x$fpath)
-  
-  #progress$inc('Loading...' %&% x$fpath)
-  tbl <- fst::read_fst(x$fpath, as.data.table = TRUE)
-  # tbl = data.table::fread(file = x$fpath, stringsAsFactors = FALSE, header = TRUE)
-  tbl = tbl[tbl$Project %in% project_name, ]
-  if(!nrow(tbl)){
-    return(NULL)
-  }
-  mish = headers[!headers %in% names(tbl)]
-  for(m in mish){
-    tbl[[m]] <- NA
-  }
-  
-  # Load YAML files
-  conf = NULL
-  yaml_path = paste0(x$fpath, '.yaml')
-  if(file.exists(yaml_path)){
-    conf = raveio::load_yaml(yaml_path)
-  }
-  print('returning loaded data ')
-  return(list(
-    data = tbl,
-    conf = conf,
-    path = x$fpath,
-    subject = tbl$Subject[[1]]
-  ))
-}))
-
-res = do.call('rbind', lapply(tbls, '[[', 'data'))
-
-if(!is.data.frame(res) || !nrow(res)){
-  res = NULL
-}else{
-  try({
-    res$Electrode = as.character(res$Electrode)
-    res$Subject = as.character(res$Subject)
-    res$Condition = as.character(res$Condition)
-  }, silent = TRUE)
-  
-  subjects = sapply(tbls, '[[', 'subject')
-  confs = lapply(tbls, '[[', 'conf')# at here, the lapply is equivalent to do.call(`[[` or "[[",list(tbls,'conf')), or `[[`(tbls,'conf')
-  names(confs) = subjects
-  
-  res = list(
-    data = res,
-    subjects = subjects,
-    confs = confs,
-    headers = names(res)
-  )
-}
-source_data <- res
-
-```
+Parse the ROI selector and generate columns to filter `source_data$data`
 
 ```{rave get_ROI_var, language = "R", export = "roi_var"}
 # subset with only the selected ROI variable
@@ -124,15 +59,11 @@ roi_var<- paste0('VAR_IS_ROI_', roi_options$variable)
 
 ```
 
-```{rave find_data_column_name, language = "R", export = "var_name"}
-var_name = sprintf("%s_%s", baseline_method, analysis_event)
-```
+Apply ROI filters
 
 ```{rave apply_RIO_filters, language = "R", export = "raw_table"}
 library(raveclusters)
 raw_table <- source_data$data
-#var_name = names(raw_table)[3]
-
 
 roi_list <- c("VAR_IS_ROI_Hemisphere", "VAR_IS_ROI_freesurferlabel", 
               "VAR_IS_ROI_Group", "VAR_IS_ROI_Block")
@@ -146,243 +77,323 @@ raw_table = raw_table[, !names(raw_table) %in% excluded_roi, with = FALSE]
 #select based on the ROI selector
 use_regex <- ( roi_options$roi_ignore_gyrus_sulcus || roi_options$roi_ignore_hemisphere )
 
-table_apply_roi <- function(table, roi_column, roi, use_regex){
-  var <- table[[roi_column]]
-  
-  if(use_regex){
-    
-    pattern <- paste0('(',roi,')', collapse = '|')
-    idx <- str_detect(var, pattern)
-    
-  } else {
-    idx <- var %in% roi
-  }
-  
-  return(table[idx,])
-}
-
-
-
-raw_table <- table_apply_roi(table = raw_table, roi_column = roi_var,
-                             roi = filter_by_roi, use_regex = use_regex)
-
-
+raw_table <- raveclusters::table_apply_roi(
+  table = raw_table, roi_column = roi_var,
+  roi = filter_by_roi, use_regex = use_regex,
+  na_rm = FALSE)
 ```
 
 
-```{rave apply_time_filter, languae = "R", export = "collapsed"}
+Parse the event selector to find corresponding column names in `source_data$data`
+
+```{rave find_data_column_name, language = "R", export = "var_name"}
+var_name <- sprintf("%s_%s", baseline_method, analysis_event)
+```
+
+Collapse the filtered `source_data$data` again. This time calculate weighted mean (by trial count) for each group. This table contains the following columns:
+* `Subject`: subject code
+* `Electrode`: electrode number
+* `VAR_IS_ROI_xxx`: ROI filters
+* `Time`: time point (in second)
+* `Group`: group index
+* `Variable`: event variable
+* `Value`: collapsed (mean) power data
+
+```{rave collapse_data_by_condition_group, languae = "R", export = "collapsed"}
 library(rutabaga)
+library(data.table)
 collapsed = lapply(seq_along(input_groups), function( ii ){
 
   # get the condition groups
   group = input_groups[[ ii ]]
-  group_name = group$group_name
-
-
-  if(is.null(group_name) && group_name == ''){
-    group_name = sprintf('Group %d', ii)
-  }
+  # group_name = group$group_name
+  # 
+  # 
+  # if(is.null(group_name) && group_name == ''){
+  #   group_name = sprintf('Group %d', ii)
+  # }
 
   group_condition = group$group_conditions
+# 
+#   # data within plotting time window
+#   sub_plot = raw_table[raw_table$Condition %in% group_condition &
+#                          raw_table$Time %within% plot_time_window, ]
+# 
+#   # data within analysis time window
+#   sub = sub_plot[sub_plot$Time %within% time_window, ]
+# 
+#   sub_plot$Time = paste0(sub_plot$Time, '_', ii)
+#   sub_time = paste0(sub$Time, '_',ii)
 
-  # data within plotting time window
-  sub_plot = raw_table[raw_table$Condition %in% group_condition &
-                         raw_table$Time %within% plot_time_window, ]
-
-  sub_plot$Time = paste0(sub_plot$Time, '_', ii)
-
-  # data within analysis time window
-  sub = sub_plot[sub_plot$Time %within% time_window,]
-
-  sub_time = paste0(sub$Time, '_',ii)
-
-  # define the aggregation model
-  fml <- Subject + Electrode + VAR_IS_ROI_freesurferlabel ~ Time
-  fml[[2]][[3]] <- parse(text = roi_var)[[1]]
-
-  collapsed_mean <- lapply(var_name, function(var){
-    reshape2::dcast(
-      sub_plot,
-      fml,
-      fun.aggregate = mean, value.var = var
-    )
-  }
-  )
-
-  merged <- Reduce(function(a, b){
-    # b <- collapsed[[1]]
-    merge(a, b, all = FALSE,
-          by = c("Subject", 'Electrode',roi_var))
-  }, collapsed_mean)
-
-  return(list(
-    collapsed_mean = merged,
-    group_name = group_name,# is this necessary?
-    group_index = ii,# and this?
-    sub_time = sub_time
-  ))
+  # collapse the power, weighted by count
+  group_columns <- c("Subject", "Electrode", roi_var, "Time")
+  collapsed_table <- raw_table[
+    Condition %in% group_condition,
+    lapply(.SD, function(x, w) {
+      if(!is.numeric(x)) {
+        x <- as.double(x)
+      }
+      sel <- !is.na(x)
+      if(!any(sel)) { return(NA_real_) }
+      sum((x * w)[sel]) / sum(w[sel])
+    }, w = count),
+    keyby = group_columns,  # group by and sort by group_columns
+    .SDcols = var_name
+  ]
+  
+  # melt by var_name
+  melted_table <- data.table::melt(collapsed_table, id.vars = group_columns, measure.vars = var_name, variable.factor = FALSE, variable.name = "Variable", value.name = "Value")
+  # melted_table$Time <- paste0(melted_table$Time, "_", ii)
+  melted_table$Group <- ii
+  
+  # fml <- Subject + Electrode + VAR_IS_ROI_freesurferlabel ~ Time
+  # fml[[2]][[3]] <- parse(text = roi_var)[[1]]
+  # 
+  # collapsed_mean <- lapply(var_name, function(var){
+  #   reshape2::dcast(
+  #     sub_plot,
+  #     fml,
+  #     fun.aggregate = mean, value.var = var
+  #   )
+  # }
+  # )
+  # 
+  # merged <- Reduce(function(a, b){
+  #   # b <- collapsed[[1]]
+  #   merge(a, b, all = FALSE,
+  #         by = c("Subject", 'Electrode',roi_var))
+  # }, collapsed_mean)
+  # 
+  # return(list(
+  #   collapsed_mean = merged,
+  #   group_name = group_name,# is this necessary?
+  #   group_index = ii,# and this?
+  #   sub_time = sub_time
+  # ))
+  melted_table
 })
 
-
+# rbind
+collapsed <- data.table::rbindlist(collapsed)
+print(collapsed)
 ```
 
+Reshape and "cast" the `collapsed` table to a matrix to apply the clustering algorithms, resulting in `collapsed_array`. `collapsed_array` is a matrix:
+* Each row is a combination of `Subject`, `Electrode`, and event `Variable`. You can use `attr(collapsed_array, "item_table")` to obtain the lookup table
+* Each column is a time-point and group combination, sorted by group first, and then time in ascending order. You can use `attr(collapsed_array, "time_table")` to obtain the column lookup table
 
+```{rave reshape_collapsed_data_to_matrix, export = "collapsed_array"}
 
+# Split per subject, electrode, Variable (event)
+collapsed$Unit <- sprintf(
+  "%s^%s^%s",
+  collapsed$Subject,
+  collapsed$Electrode,
+  collapsed$Variable
+)
+collapsed_array <- reshape2::acast(
+  data = collapsed, value.var = "Value",
+  formula = Unit ~ Time + Group, 
+  fill = NA_real_, fun.aggregate = function(x){
+    sel <- is.na(x)
+    if(all(sel)) { return(NA_real_) }
+    mean(x[!sel])
+  }
+)
 
+dnames <- dimnames(collapsed_array)
+names(dnames) <- c("Unit", "Time")
 
-```{rave data_merging, languae = "R", export = "merged"}
-merged = Reduce(function(a, b){
-  # b <- collapsed[[1]]
-  list(
-    collapsed_mean = merge(a$collapsed_mean, b$collapsed_mean, all = FALSE, 
-                           by = c("Subject", 'Electrode',roi_var)),
-    sub_time = c(a$sub_time, b$sub_time)
-  )
-}, collapsed, right = FALSE)
+# reorder time
+time_mat <- stringr::str_split_fixed(dnames$Time, "_", n = 2)
+time_order <- order(as.integer(time_mat[,2]), as.double(time_mat[,1]))
+
+dnames$Time <- dnames$Time[time_order]
+collapsed_array <- collapsed_array[, time_order, drop = FALSE]
+dimnames(collapsed_array) <- dnames
+
+time_mat <- as.data.frame(stringr::str_split_fixed(dnames$Time, "_", n = 2))
+
+# store time information to the array
+names(time_mat) <- c("Time", "Group")
+time_mat$Time <- as.double(time_mat$Time)
+time_mat$Group <- as.integer(time_mat$Group)
+attr(collapsed_array, "time_table") <- time_mat
+
+# Store row information
+item_table <- stringr::str_split_fixed(dnames$Unit, "\\^", n = 3)
+item_table <- as.data.frame(item_table)
+names(item_table) <- c("Subject", "Electrode", "Event")
+item_table$Electrode <- as.integer(item_table$Electrode)
+attr(collapsed_array, "item_table") <- item_table
+
+print(names(attributes(collapsed_array)))
 ```
 
+We z-score baseline based on `collapsed_array`:
 
+* For each group `ii`, find the corresponding sub-matrix
+* Calculate mean and standard deviation for each row. Make sure the `NA` missing values are properly handled
 
+The returned `baseline` variable is a list of sub-matrices, each of which represents z-scored data within the corresponding group.
 
-```{rave data_scaling, languae = "R", export = "baseline"}
+```{rave z-score_baseline_collapsed_array, export = "baseline"}
 library(rutabaga)
-baseline = lapply(seq_along(input_groups), function( ii ){
-  group = input_groups[[ ii ]]
+force(collapsed_array)
+time_table <- attr(collapsed_array, "time_table")
+
+baseline <- lapply(seq_along(input_groups), function( ii ){
+  column_sel <- time_table$Group == ii
+  baseline_sel <- column_sel & (time_table$Time %within% baseline_time)
   
-  group_name = group$group_name
-  
-  if(is.null(group_name) && group_name == ''){
-    group_name = sprintf('Group %d', ii)
+  bl <- collapsed_array[, baseline_sel, drop = FALSE]
+  blmean <- rowMeans(bl, na.rm = TRUE)
+  if(sum(baseline_sel) < 2) {
+    stop("Cannot z-score data. Please increase your baseline range.")
   }
+  blstdev <- apply(bl, 1, stats::sd, na.rm = TRUE)
+  re <- ((collapsed_array[, column_sel, drop = FALSE]) - as.vector(blmean)) / as.vector(blstdev)
   
-  group_condition = group$group_conditions
-  
-  baseline_raw = raw_table[raw_table$Condition %in% group_condition &
-                             raw_table$Time %within% baseline_time, ]
-  
-  fml <- Subject + Electrode + VAR_IS_ROI_freesurferlabel ~ Time
-  fml[[2]][[3]] <- parse(text = roi_var)[[1]]
-  
-  baseline <- lapply(var_name, function(var){
-    reshape2::dcast(
-      baseline_raw,
-      fml,
-      fun.aggregate = mean, value.var = var
-    )
-  }
+  list(
+    data = re,
+    time = time_table$Time[column_sel]
   )
-  
-  return(baseline)
-  
 })
-
-baseline_merged = Reduce(function(a, b){
-  # b <- collapsed[[1]]
-  
-  baseline_mean = merge(a, b, all = FALSE, 
-                        by = c("Subject", 'Electrode',roi_var))
-  baseline_mean
-  
-}, baseline, right = FALSE)
-
-baseline_mean_indata <- baseline_merged[,!names(baseline_merged) %in% c("Subject", 'Electrode',roi_var)]
-
-baseline_mean <- rowMeans(baseline_mean_indata)
-baseline_sd <- apply(baseline_mean_indata,1,sd)
-
-baseline <- list(baseline_mean = baseline_mean, 
-                 baseline_sd = baseline_sd)
-
 ```
 
+Variable `baseline` is a list of matrices. We could also `cbind` these matrices, resulting in `baseline_array`. However, I don't find this combined array that useful (see next block)
 
+```{rave column-bind_baseline_list, export="baseline_array"}
+baseline_array <- do.call("cbind", lapply(baseline, function(x){
+  x$data
+}))
+attributes(baseline_array) <- attributes(collapsed_array)
+```
 
-```{rave data_decomposation, languae = "R", export = "collapsed_data"}
-collapsed_data = merged$collapsed_mean
-if (check_scale) {#with or without 'input', what is the difference? 
-  
-  collapsed_data[, !names(collapsed_data) %in% c('Subject', 'Electrode', roi_var)] <- 
-    t(scale(t(collapsed_data[, !names(collapsed_data) %in% c('Subject', 'Electrode', roi_var)]),
-            center = baseline$baseline_mean, baseline$baseline_sd))
+The matrix `baseline_array` is not that useful for the following considerations:
+1. We are more interested in data within the analysis time-window
+2. (Most) clustering algorithms cannot take in `NA` missing values
+3. Some rows might have `NA` within analysis time-window, and we need to remove these rows.
+
+Therefore our strategy is to:
+* For each group, slice the columns (`baseline` list items) such that the corresponding time points fall within the `time_window`
+* Column-bind the sliced data
+* Find complete cases (`complete.cases (stats)`) of the matrix
+* Subset, yield `indata_analysis`
+
+Since the first step is done at each condition group level, `baseline` is more convenient than `baseline_array`
+
+The result, `indata_analysis` has an attribute `attr(indata_analysis, "complete_cases")`, is a logical vector that can be used in the future to find which rows enter the clustering analysis in `collapsed_array` and `baseline_array`.
+
+```{rave slice_data_by_anslysis_window, export="indata_analysis"}
+library(rutabaga)
+# Filter by analysis window first
+indata_analysis <- lapply(baseline, function(item){
+  # item <- baseline[[1]]
+  item$data[, item$time %within% time_window, drop = TRUE]
+})
+indata_analysis <- do.call("cbind", indata_analysis)
+
+# Only keep complete data (No NA)
+sel <- stats::complete.cases(indata_analysis)
+if(!sum(sel)) {
+  stop("The analysis window cannot have missing data, but all signals contain missing values. Try narrowing the analysis range")
 }
+indata_analysis <- indata_analysis[sel,,drop = FALSE]
+attr(indata_analysis, "complete_cases") <- sel
 ```
 
+`indata_plot` is similar to `indata_analysis`, but sliced based on plotting time window `plot_time_window`.
 
-```{rave analysis_data, languae = "R", export = "indata"}
+```{rave slice_data_by_ploting_window, export="indata_plot"}
+library(rutabaga)
 
-indata = collapsed_data[, !names(collapsed_data) %in% c('Subject', 'Electrode', roi_var)]
-if (check_scale) {#with or without 'input', what is the difference? 
-  indata = t(scale(t(indata),center = baseline$baseline_mean, 
-                   baseline$baseline_sd))
-}
+sel <- attr(indata_analysis, "complete_cases")
 
+# Filter by analysis window first
+indata_plot <- lapply(baseline, function(item){
+  # item <- baseline[[1]]
+  item$data[sel, , drop = TRUE]
+})
+indata_plot <- do.call("cbind", indata_plot)
 ```
 
+Calculate the distance matrix based on `indata_analysis`
 
 ```{rave measure_distance, language = "R", export = 'dis'}
 
 if(isTRUE(distance_method == '1 - correlation')){
-  dis = as.dist(1-cor(t(indata)))
+  dis = as.dist(1-cor(t(indata_analysis)))
 }else if(isTRUE(distance_method == 'DTW')){
-  dis = as.dist(dtw::dtwDist(indata))
+  dis = as.dist(dtw::dtwDist(indata_analysis))
 }else{
-  dis = dist(indata, method = distance_method)
+  dis = dist(indata_analysis, method = distance_method)
 }
-
 ```
 
+Perform clustering algorithms. Variable `clusters` has four columns:
+* `Subject`, `Electrode`, `Event`, `Cluster`
 
 ```{rave apply_clustering, language = "R", export = 'clusters'}
-n_clust = min(input_nclusters, nrow(indata))
+n_clust = min(input_nclusters, nrow(dis))
+
+item_table <- attr(collapsed_array, "item_table")
+sel <- attr(indata_analysis, "complete_cases")
+item_table <- item_table[sel, , drop = FALSE]
 
 if (input_method == "H-Clust"){
   hcl = stats::hclust(dis, method = hclust_method)
-  clusters <- stats::cutree(hcl, k = n_clust)
+  item_table$Cluster <- stats::cutree(hcl, k = n_clust)
 } else if (input_method == "PAM") {
-  km <- cluster::pam(dis, k = n_clust,  cluster.only = TRUE, keep.data = FALSE, 
+  km <- cluster::pam(dis, k = n_clust,  cluster.only = TRUE, 
+                     keep.data = FALSE, 
                      keep.diss = FALSE)
-  clusters <- km
+  item_table$Cluster <- km
 }
 
+
+# rename
+clusters <- item_table
+print(dim(clusters))
+print(head(clusters))
 ```
 
+
+Calculate mean and standard error of mean on the data slice, used to generate plots
 
 ```{rave get_mse, language = "R", export = "mse"}
 library(dipsaus)
-mse <- lapply(sort(unique(clusters)), function(ci){
-  
-  apply(collapsed_data[clusters == ci,
-                  !names(collapsed_data) %in% c('Subject', 'Electrode', roi_var),
-                  drop=FALSE], 
-        2, dipsaus::mean_se)
-  
+cluster_idx <- sort(unique(clusters$Cluster))
+
+mse <- lapply(cluster_idx, function(ci){
+  apply(
+    indata_plot[clusters$Cluster == ci,,drop = FALSE], 2, function(x){
+      dipsaus::mean_se(x, na.rm = TRUE, se_na_as_zero = TRUE)
+    })
 })
-
-
+# mse <- lapply(cluster_idx, function(ci){
+#   ### Question: collapsed data or baselined?
+#   baseline
+#   apply(collapsed_data[clusters == ci,
+#                   !names(collapsed_data) %in% c('Subject', 'Electrode', roi_var),
+#                   drop=FALSE], 
+#         2, dipsaus::mean_se)
+#   
+# })
 ```
 
 
-## Build, Visualize, & Run
+## Pipeline Visualization
 
-Please make sure the following code block is at the end of your pipeline file. This block will build the pipeline and generate a `make-rave-builtin-cluster.R` script with your pipeline markdown file. `RAVE` will use the generated pipeline script to execute the pipeline in the dashboard application, or in massive production mode.
-
-```{r build, echo=FALSE, results='hide'}
+```{r build, echo=FALSE}
 build_pipeline(make_file = "make-rave-builtin-cluster.R")
-```
-
-
-Once the pipeline script `make-rave-builtin-cluster.R` is built, you can visualize and execute the pipeline without the need of re-knit this document. Notice we use `r` block instead of `rave`. (This is because the code blocks are not part of pipeline targets.)
-
-```{r execute}
 Sys.setenv("RAVE_PIPELINE" = normalizePath("."))
-raveio::pipeline_run(type = "vanilla")
-raveio::pipeline_progress(method = 'details')
-```
-
-
-```{r visualize, echo=FALSE}
-Sys.setenv("RAVE_PIPELINE" = normalizePath("."))
-raveio::pipeline_visualize()
+# raveio::pipeline_visualize(level_separation = 20)
+local({
+  pipe_dir <- raveio:::activate_pipeline(".")
+  targets::tar_destroy(ask = FALSE)
+  targets::tar_visnetwork(targets_only = TRUE, shortcut = FALSE, level_separation = 1000, zoom_speed = 0.3)
+})
 ```
 
 

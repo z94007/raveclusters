@@ -1,5 +1,8 @@
 #' @export
-table_apply_roi <- function(table, roi_column, roi, use_regex){
+table_apply_roi <- function(
+  table, roi_column, roi, use_regex,
+  na_rm = FALSE
+){
   var <- table[[roi_column]]
   
   if(use_regex){
@@ -11,7 +14,12 @@ table_apply_roi <- function(table, roi_column, roi, use_regex){
     idx <- var %in% roi
   }
   
-  return(table[idx,])
+  if( na_rm ) {
+    return(table[idx & !is.na(var),])
+  } else {
+    return(table[is.na(var) | idx,])
+  }
+  
 }
 
 

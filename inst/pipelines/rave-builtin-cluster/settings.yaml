@@ -18,7 +18,9 @@ input_groups:
   - know_av
   - meat_av
   - drive_av
-source_files: YAK_demo_export-20210525-082018.fst
+source_files: 
+  - YAK_demo_export-20210525-082018.fst
+  - YCK_pow_by_cond-20211214-141952.fst
 baseline_time:
 - -1.0
 - 0.0
@@ -36,8 +38,12 @@ plot_time_window:
 - 0.0
 - 1.5
 check_scale: 'TRUE'
-filter_by_roi: right
-baseline_method: z_score_Amplitude
+filter_by_roi: 
+  - right
+  - left
+baseline_method: 
+  - z_score_Amplitude
+  - Pct_Change_Power
 time_window:
 - 0.0
 - 0.6
