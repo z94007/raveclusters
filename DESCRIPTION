@@ -1,6 +1,6 @@
 Package: raveclusters
 Type: Package
-Title: What the Package Does (Title Case)
+Title: Group-level Clustering on 'RAVE' Electrode Signals
 Language: en-US
 Version: 0.1.0.9000
 Description: More about what it does (maybe more than one line)
@@ -8,7 +8,7 @@ Description: More about what it does (maybe more than one line)
 License: GPL-3
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 7.1.1
+RoxygenNote: 7.1.2
 URL: https://z94007.github.io/raveclusters, https://github.com/z94007/raveclusters
 BugReports: https://github.com/z94007/raveclusters/issues
 Authors@R: 
@@ -16,7 +16,6 @@ Authors@R:
     person(given = "Xiang", family = "Zhang", role = c("cre", "aut"), email = "your_email@mail.edu")
     )
 Imports:
-    devtools,
     shiny (>= 1.2.0),
     rlang (>= 0.3.0),
     stringr (>= 1.3.1),
@@ -33,6 +32,7 @@ Imports:
     dtw (>= 1.22.3),
     visNetwork (>= 2.1.0)
 Suggests:
+    devtools,
     rstudioapi (>= 0.9.0),
     knitr,
     rmarkdown

@@ -31,90 +31,17 @@ project <- raveio::as_rave_project(project = project_name)
 ```
 
 
-```{rave get_input_file_meta_information, language = "R", export = "source_metas"}
+```{rave load_data, language = "R", export = "source_data"}
 # get the exported path of power explorer
-search_paths <- project$group_path("power_explorer")
-
-find_source = function(search_paths, fname){
-  fpaths = file.path(search_paths, 'exports',fname)
-  fexists = file.exists(fpaths)
-  if(!any(fexists)){ return(NULL) }
-  return(fpaths[which(fexists)[1]])
-}
-
-source_metas = lapply(source_files, function(fpath){
-  fpath = find_source(search_paths, fpath)
-  if( is.null(fpath) ){ return(NULL) }
-  dat <- fst::read_fst(fpath, from = 1, to = 1)
-  # read.csv( fpath , header = TRUE, nrows = 1)
-  list(
-    fpath = fpath,
-    header = names(dat)
-  )
-})
-source_metas = dipsaus::drop_nulls(source_metas)
+search_paths <- file.path(
+  project$group_path("power_explorer"),
+  "exports"
+)
+source_data <- raveclusters::import_configurations(
+  search_paths = search_paths, 
+  file_names = source_files)
 ```
 
-
-```{rave load_input_files, language = "R", export = "source_data"}
-library(rutabaga)
-headers = unique(unlist(lapply(source_metas, '[[', 'header')))
-tbls = dipsaus::drop_nulls(lapply(source_metas, function(x){
-  
-  print('trying to load ' %&% x$fpath)
-  
-  #progress$inc('Loading...' %&% x$fpath)
-  tbl <- fst::read_fst(x$fpath, as.data.table = TRUE)
-  # tbl = data.table::fread(file = x$fpath, stringsAsFactors = FALSE, header = TRUE)
-  tbl = tbl[tbl$Project %in% project_name, ]
-  if(!nrow(tbl)){
-    return(NULL)
-  }
-  mish = headers[!headers %in% names(tbl)]
-  for(m in mish){
-    tbl[[m]] <- NA
-  }
-  
-  # Load YAML files
-  conf = NULL
-  yaml_path = paste0(x$fpath, '.yaml')
-  if(file.exists(yaml_path)){
-    conf = raveio::load_yaml(yaml_path)
-  }
-  print('returning loaded data ')
-  return(list(
-    data = tbl,
-    conf = conf,
-    path = x$fpath,
-    subject = tbl$Subject[[1]]
-  ))
-}))
-
-res = do.call('rbind', lapply(tbls, '[[', 'data'))
-
-if(!is.data.frame(res) || !nrow(res)){
-  res = NULL
-}else{
-  try({
-    res$Electrode = as.character(res$Electrode)
-    res$Subject = as.character(res$Subject)
-    res$Condition = as.character(res$Condition)
-  }, silent = TRUE)
-  
-  subjects = sapply(tbls, '[[', 'subject')
-  confs = lapply(tbls, '[[', 'conf')# at here, the lapply is equivalent to do.call(`[[` or "[[",list(tbls,'conf')), or `[[`(tbls,'conf')
-  names(confs) = subjects
-  
-  res = list(
-    data = res,
-    subjects = subjects,
-    confs = confs,
-    headers = names(res)
-  )
-}
-source_data <- res
-
-```
 
 ```{rave get_ROI_var, language = "R", export = "roi_var"}
 # subset with only the selected ROI variable
@@ -125,14 +52,13 @@ roi_var<- paste0('VAR_IS_ROI_', roi_options$variable)
 ```
 
 ```{rave find_data_column_name, language = "R", export = "var_name"}
-var_name = sprintf("%s_%s", baseline_method, analysis_event)
+var_name <- sprintf("%s_%s", baseline_method, analysis_event)
 ```
 
 ```{rave apply_RIO_filters, language = "R", export = "raw_table"}
 library(raveclusters)
 raw_table <- source_data$data
 #var_name = names(raw_table)[3]
-
 
 roi_list <- c("VAR_IS_ROI_Hemisphere", "VAR_IS_ROI_freesurferlabel", 
               "VAR_IS_ROI_Group", "VAR_IS_ROI_Block")
@@ -146,83 +72,91 @@ raw_table = raw_table[, !names(raw_table) %in% excluded_roi, with = FALSE]
 #select based on the ROI selector
 use_regex <- ( roi_options$roi_ignore_gyrus_sulcus || roi_options$roi_ignore_hemisphere )
 
-table_apply_roi <- function(table, roi_column, roi, use_regex){
-  var <- table[[roi_column]]
-  
-  if(use_regex){
-    
-    pattern <- paste0('(',roi,')', collapse = '|')
-    idx <- str_detect(var, pattern)
-    
-  } else {
-    idx <- var %in% roi
-  }
-  
-  return(table[idx,])
-}
-
-
-
-raw_table <- table_apply_roi(table = raw_table, roi_column = roi_var,
-                             roi = filter_by_roi, use_regex = use_regex)
-
-
+raw_table <- raveclusters::table_apply_roi(
+  table = raw_table, roi_column = roi_var,
+  roi = filter_by_roi, use_regex = use_regex)
 ```
 
 
 ```{rave apply_time_filter, languae = "R", export = "collapsed"}
 library(rutabaga)
+library(data.table)
 collapsed = lapply(seq_along(input_groups), function( ii ){
 
   # get the condition groups
   group = input_groups[[ ii ]]
-  group_name = group$group_name
-
-
-  if(is.null(group_name) && group_name == ''){
-    group_name = sprintf('Group %d', ii)
-  }
+  # group_name = group$group_name
+  # 
+  # 
+  # if(is.null(group_name) && group_name == ''){
+  #   group_name = sprintf('Group %d', ii)
+  # }
 
   group_condition = group$group_conditions
+# 
+#   # data within plotting time window
+#   sub_plot = raw_table[raw_table$Condition %in% group_condition &
+#                          raw_table$Time %within% plot_time_window, ]
+# 
+#   # data within analysis time window
+#   sub = sub_plot[sub_plot$Time %within% time_window, ]
+# 
+#   sub_plot$Time = paste0(sub_plot$Time, '_', ii)
+#   sub_time = paste0(sub$Time, '_',ii)
 
-  # data within plotting time window
-  sub_plot = raw_table[raw_table$Condition %in% group_condition &
-                         raw_table$Time %within% plot_time_window, ]
-
-  sub_plot$Time = paste0(sub_plot$Time, '_', ii)
-
-  # data within analysis time window
-  sub = sub_plot[sub_plot$Time %within% time_window,]
-
-  sub_time = paste0(sub$Time, '_',ii)
-
-  # define the aggregation model
-  fml <- Subject + Electrode + VAR_IS_ROI_freesurferlabel ~ Time
-  fml[[2]][[3]] <- parse(text = roi_var)[[1]]
-
-  collapsed_mean <- lapply(var_name, function(var){
-    reshape2::dcast(
-      sub_plot,
-      fml,
-      fun.aggregate = mean, value.var = var
-    )
-  }
-  )
-
-  merged <- Reduce(function(a, b){
-    # b <- collapsed[[1]]
-    merge(a, b, all = FALSE,
-          by = c("Subject", 'Electrode',roi_var))
-  }, collapsed_mean)
-
-  return(list(
-    collapsed_mean = merged,
-    group_name = group_name,# is this necessary?
-    group_index = ii,# and this?
-    sub_time = sub_time
-  ))
+  # collapse the power, weighted by count
+  group_columns <- c("Subject", "Electrode", roi_var, "Time")
+  collapsed_table <- raw_table[
+    Condition %in% group_condition,
+    lapply(.SD, function(x, w) {
+      if(!is.numeric(x)) {
+        x <- as.double(x)
+      }
+      sel <- !is.na(x)
+      if(!any(sel)) { return(NA_real_) }
+      sum((x * w)[sel]) / sum(w[sel])
+    }, w = count),
+    keyby = group_columns,  # group by and sort by group_columns
+    .SDcols = var_name
+  ]
+  
+  # melt by var_name
+  melted_table <- data.table::melt(collapsed_table, id.vars = group_columns, measure.vars = var_name, variable.factor = FALSE, variable.name = "Variable", value.name = "Value")
+  melted_table$Time <- paste0(melted_table$Time, "_", ii)
+  
+  # fml <- Subject + Electrode + VAR_IS_ROI_freesurferlabel ~ Time
+  # fml[[2]][[3]] <- parse(text = roi_var)[[1]]
+  # 
+  # collapsed_mean <- lapply(var_name, function(var){
+  #   reshape2::dcast(
+  #     sub_plot,
+  #     fml,
+  #     fun.aggregate = mean, value.var = var
+  #   )
+  # }
+  # )
+  # 
+  # merged <- Reduce(function(a, b){
+  #   # b <- collapsed[[1]]
+  #   merge(a, b, all = FALSE,
+  #         by = c("Subject", 'Electrode',roi_var))
+  # }, collapsed_mean)
+  # 
+  # return(list(
+  #   collapsed_mean = merged,
+  #   group_name = group_name,# is this necessary?
+  #   group_index = ii,# and this?
+  #   sub_time = sub_time
+  # ))
+  melted_table
 })
 
+# rbind
+collapsed <- data.table::rbindlist(collapsed)
+
+fml <- stats::reformulate(sprintf("Subject + Electrode + %s + Variable ~ Time", roi_var))
+fml <- as.formula(fml[[2]])
+collapsed_mean <- data.table::dcast(collapsed, formula = fml, value.var = "Value")
 
 ```
 
@@ -368,19 +302,6 @@ Please make sure the following code block is at the end of your pipeline file. T
 
 ```{r build, echo=FALSE, results='hide'}
 build_pipeline(make_file = "make-rave-builtin-cluster.R")
-```
-
-
-Once the pipeline script `make-rave-builtin-cluster.R` is built, you can visualize and execute the pipeline without the need of re-knit this document. Notice we use `r` block instead of `rave`. (This is because the code blocks are not part of pipeline targets.)
-
-```{r execute}
-Sys.setenv("RAVE_PIPELINE" = normalizePath("."))
-raveio::pipeline_run(type = "vanilla")
-raveio::pipeline_progress(method = 'details')
-```
-
-
-```{r visualize, echo=FALSE}
 Sys.setenv("RAVE_PIPELINE" = normalizePath("."))
 raveio::pipeline_visualize()
 ```

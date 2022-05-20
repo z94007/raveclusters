@@ -2,6 +2,11 @@
 
 export(convert_cluster_table)
 export(dev_raveclusters)
+export(find_source)
+export(import_configurations)
+export(ravecluster)
+export(ravecluster_default_opts)
+export(scan_power_explorer_exports)
 export(table_apply_roi)
 import(dipsaus)
 import(graphics)
