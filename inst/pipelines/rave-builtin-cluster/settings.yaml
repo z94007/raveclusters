@@ -27,6 +27,7 @@ baseline_time:
 project_name: demo
 distance_method: manhattan
 hclust_method: ward.D2
+mds_distance: manhattan
 roi_options:
   variable: Hemisphere
   value: 

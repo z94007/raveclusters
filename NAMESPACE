@@ -2,6 +2,10 @@
 
 export(RAVE_ROI_KEY)
 export(build_roi_levels)
+export(cluster_dendrogram)
+export(cluster_mds_plot)
+export(cluster_membership)
+export(cluster_on_brain)
 export(cluster_visualization)
 export(convert_cluster_table)
 export(dev_raveclusters)

@@ -218,11 +218,15 @@ Reshape and "cast" the `collapsed` table to a matrix to apply the clustering alg
 ```{rave reshape_collapsed_data_to_matrix, export = "collapsed_array"}
 
 # Split per subject, electrode, Variable (event)
+roi_val <- collapsed[[roi_var]]
+roi_val_mode <- mode(roi_val)
+roi_val[is.na(roi_val)] <- "NA"
 collapsed$Unit <- sprintf(
-  "%s^%s^%s",
+  "%s^%s^%s^%s",
   collapsed$Subject,
   collapsed$Electrode,
-  collapsed$Variable
+  collapsed$Variable,
+  roi_val
 )
 collapsed_array <- reshape2::acast(
   data = collapsed, value.var = "Value",
@@ -254,10 +258,12 @@ time_mat$Group <- as.integer(time_mat$Group)
 attr(collapsed_array, "time_table") <- time_mat
 
 # Store row information
-item_table <- stringr::str_split_fixed(dnames$Unit, "\\^", n = 3)
+item_table <- stringr::str_split_fixed(dnames$Unit, "\\^", n = 4)
 item_table <- as.data.frame(item_table)
-names(item_table) <- c("Subject", "Electrode", "Event")
+names(item_table) <- c("Subject", "Electrode", "Event", "ROI")
 item_table$Electrode <- as.integer(item_table$Electrode)
+item_table$ROI[item_table$ROI == "NA"] <- NA
+mode(item_table$ROI) <- roi_val_mode
 attr(collapsed_array, "item_table") <- item_table
 
 print(names(attributes(collapsed_array)))
@@ -386,6 +392,7 @@ item_table <- item_table[sel, , drop = FALSE]
 if (cluster_method == "H-Clust"){
   hcl = stats::hclust(dis, method = hclust_method)
   item_table$Cluster <- stats::cutree(hcl, k = n_clust)
+  attr(item_table, "hclust") <- hcl
 } else if (cluster_method == "PAM") {
   km <- cluster::pam(dis, k = n_clust,  cluster.only = TRUE, 
                      keep.data = FALSE, 
@@ -467,6 +474,42 @@ attr(cluster_table, "color_space") <- colors
 attr(cluster_table, "cluster_idx") <- cluster_idx
 attr(cluster_table, "nclusters") <- length(cluster_idx)
 head(cluster_table)
+```
+
+Perform MDS to project `indata_analysis` to two dimensional space
+
+```{rave MDS_projection, export = "mds_result"}
+
+if(ncol(indata_analysis) < 2) {
+  mds_result <- NULL
+  return(mds_result)
+}
+
+if(ncol(indata_analysis) == 2) {
+  mds_result <- indata_analysis
+  rownames(mds_result) <- NULL
+} else {
+  
+  mds_result <- switch (
+    mds_distance,
+    `1 - correlation` = {
+      cmdscale(
+        as.dist(1 - cor(t(indata_analysis))),
+        k = 2
+      )
+    }, {
+      cmdscale(
+        dist(indata_analysis, method = mds_distance),
+        k = 2
+      )
+    }
+  )
+  
+}
+
+mds_result <- as.data.frame(mds_result)
+names(mds_result) <- c("x", "y")
+
 ```
 
 ## Pipeline Visualization

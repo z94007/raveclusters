@@ -53,6 +53,9 @@ source("common.R", local = TRUE, chdir = TRUE)
         }), deps = "settings"), input_use_baseline = targets::tar_target_raw("use_baseline", 
         quote({
             settings[["use_baseline"]]
+        }), deps = "settings"), input_mds_distance = targets::tar_target_raw("mds_distance", 
+        quote({
+            settings[["mds_distance"]]
         }), deps = "settings"), load_project = targets::tar_target_raw(name = "project", 
         command = quote({
             {
@@ -179,8 +182,11 @@ source("common.R", local = TRUE, chdir = TRUE)
         iteration = "list"), reshape_collapsed_data_to_matrix = targets::tar_target_raw(name = "collapsed_array", 
         command = quote({
             {
-                collapsed$Unit <- sprintf("%s^%s^%s", collapsed$Subject, 
-                  collapsed$Electrode, collapsed$Variable)
+                roi_val <- collapsed[[roi_var]]
+                roi_val_mode <- mode(roi_val)
+                roi_val[is.na(roi_val)] <- "NA"
+                collapsed$Unit <- sprintf("%s^%s^%s^%s", collapsed$Subject, 
+                  collapsed$Electrode, collapsed$Variable, roi_val)
                 collapsed_array <- reshape2::acast(data = collapsed, 
                   value.var = "Value", formula = Unit ~ Time + 
                     Group, fill = NA_real_, fun.aggregate = function(x) {
@@ -207,16 +213,18 @@ source("common.R", local = TRUE, chdir = TRUE)
                 time_mat$Group <- as.integer(time_mat$Group)
                 attr(collapsed_array, "time_table") <- time_mat
                 item_table <- stringr::str_split_fixed(dnames$Unit, 
-                  "\\^", n = 3)
+                  "\\^", n = 4)
                 item_table <- as.data.frame(item_table)
                 names(item_table) <- c("Subject", "Electrode", 
-                  "Event")
+                  "Event", "ROI")
                 item_table$Electrode <- as.integer(item_table$Electrode)
+                item_table$ROI[item_table$ROI == "NA"] <- NA
+                mode(item_table$ROI) <- roi_val_mode
                 attr(collapsed_array, "item_table") <- item_table
                 print(names(attributes(collapsed_array)))
             }
             return(collapsed_array)
-        }), deps = "collapsed", cue = targets::tar_cue("thorough"), 
+        }), deps = c("collapsed", "roi_var"), cue = targets::tar_cue("thorough"), 
         pattern = NULL, iteration = "list"), `z-score_baseline_collapsed_array` = targets::tar_target_raw(name = "baseline", 
         command = quote({
             {
@@ -312,6 +320,7 @@ source("common.R", local = TRUE, chdir = TRUE)
                 if (cluster_method == "H-Clust") {
                   hcl = stats::hclust(dis, method = hclust_method)
                   item_table$Cluster <- stats::cutree(hcl, k = n_clust)
+                  attr(item_table, "hclust") <- hcl
                 } else if (cluster_method == "PAM") {
                   km <- cluster::pam(dis, k = n_clust, cluster.only = TRUE, 
                     keep.data = FALSE, keep.diss = FALSE)
@@ -366,4 +375,28 @@ source("common.R", local = TRUE, chdir = TRUE)
             }
             return(cluster_table)
         }), deps = c("clusters", "color_scheme"), cue = targets::tar_cue("thorough"), 
+        pattern = NULL, iteration = "list"), MDS_projection = targets::tar_target_raw(name = "mds_result", 
+        command = quote({
+            {
+                if (ncol(indata_analysis) < 2) {
+                  mds_result <- NULL
+                  return(mds_result)
+                }
+                if (ncol(indata_analysis) == 2) {
+                  mds_result <- indata_analysis
+                  rownames(mds_result) <- NULL
+                } else {
+                  mds_result <- switch(mds_distance, `1 - correlation` = {
+                    cmdscale(as.dist(1 - cor(t(indata_analysis))), 
+                      k = 2)
+                  }, {
+                    cmdscale(dist(indata_analysis, method = mds_distance), 
+                      k = 2)
+                  })
+                }
+                mds_result <- as.data.frame(mds_result)
+                names(mds_result) <- c("x", "y")
+            }
+            return(mds_result)
+        }), deps = c("indata_analysis", "mds_distance"), cue = targets::tar_cue("thorough"), 
         pattern = NULL, iteration = "list"))

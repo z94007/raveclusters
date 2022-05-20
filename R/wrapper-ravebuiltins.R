@@ -21,11 +21,6 @@ remove_gyrus_sulcus_labels <- function(levels) {
 
 get_palette <- function (pname, get_palettes = FALSE, get_palette_names = FALSE) {
   
-  if(dipsaus::package_installed("ravebuiltins")) {
-    ns <- asNamespace("ravebuiltins")
-    return(ns$get_palette(pname, get_palettes, get_palette_names))
-  }
-  
   .palettes <- list(
     `Beautiful Field` = c("orange", "dodgerblue3", "darkgreen", "orangered", "brown", "purple3"), 
     Perm4_0 = c("#2297E6", "#F5C710", "#61D04F", "#DF536B", "#CD0BBC"), 
@@ -37,7 +32,9 @@ get_palette <- function (pname, get_palettes = FALSE, get_palette_names = FALSE)
     Pastel2 = c("#b3e2cd", "#fdcdac", "#cbd5e8", "#f4cae4", "#e6f5c9", "#fff2ae", "#f1e2cc", "#cccccc"), 
     Set1 = c("#e41a1c", "#377eb8", "#4daf4a", "#984ea3", "#ff7f00", "#ffff33", "#a65628", "#f781bf"),
     Set2 = c("#66c2a5", "#fc8d62", "#8da0cb", "#e78ac3", "#a6d854", "#ffd92f", "#e5c494", "#b3b3b3"), 
-    Set3 = c("#8dd3c7", "#ffffb3", "#bebada", "#fb8072", "#80b1d3", "#fdb462", "#b3de69", "#fccde5"))
+    Set3 = c("#8dd3c7", "#ffffb3", "#bebada", "#fb8072", "#80b1d3", "#fdb462", "#b3de69", "#fccde5"),
+    BlueYellow = grDevices::hcl.colors(101, palette = "BluYl", rev = TRUE)
+  )
   if (missing(pname)) {
     if (get_palette_names) 
       return(names(.palettes))

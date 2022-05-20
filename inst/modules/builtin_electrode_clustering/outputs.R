@@ -1,3 +1,30 @@
+get_pipeline_results <- function(fast_ok = FALSE) {
+  
+  if(!fast_ok) {
+    return(local_data$results)
+  }
+  results <- local_data$results
+  fast_results <- local_data$fast_results
+  if(!is.list(results) || !length(results)) {
+    return(fast_results)
+  }
+  
+  # compare
+  # check inputs
+  input_keys <- c("use_baseline", "baseline_time", "analysis_time_window", "power_unit", "analysis_event", "mds_distance")
+  
+  if(identical(
+    fast_results$settings[input_keys],
+    results$settings[input_keys]
+  )) {
+    return(results)
+  } else {
+    return(fast_results)
+  }
+  
+}
+
+
 fix_font_color_button <- function (outputId, label = "Download", class = NULL, ...)  {
   aTag <- tags$a(id = outputId, class = paste("btn shiny-download-link", 
                                               class), href = "", target = "_blank", download = NA, 
@@ -249,203 +276,107 @@ visnet <- function(){
 
 mds_plot <- function(){
   # rave::rave_context()
-  
-  res <- local_data$my_results
+  results <- get_pipeline_results(fast_ok = TRUE)
   
   shiny::validate(
-    shiny::need(!is.null(res$indata) && ncol(res$indata) > 2, 
-                message = 'Please press "Run Analysis" button.'),
-    shiny::need(length(res$input_nclusters) && !is.na(res$input_nclusters) &&res$input_nclusters > 1, 
-                message = 'Number of clusters must be greater than 1')
+    shiny::need(
+      is.list(results) && is.data.frame(results$mds_result), 
+      message = 'MDS plot does not exist. Try to adjust (narrow) your analysis time window')
   )
   
-  rave::set_rave_theme()
+  raveclusters::cluster_mds_plot(results)
+  # # check
+  # if(!is.list(results)) {
+  #   raveclusters::cluster_mds_plot(fast_results)
+  # } else {
+  #   # check inputs
+  #   input_keys <- c("use_baseline", "baseline_time", "analysis_time_window", "power_unit", "analysis_event", "mds_distance")
+  #   
+  #   if(identical(
+  #     fast_results$settings[input_keys],
+  #     results$settings[input_keys]
+  #   )) {
+  #     raveclusters::cluster_mds_plot(results)
+  #   } else {
+  #     raveclusters::cluster_mds_plot(fast_results)
+  #   }
+  # }
   
-  #mds_res = cmdscale(dist(res$indata, method = input$mds_distance_method), k=2)
-  # ravebuiltins:::set_palette_helper
-  
-  assign('res', res, envir = globalenv())
-  
-  #colors
-  collapsed_data <- res$collapsed
-  
-  par(mfrow = c(1,1))
-
-  pcs = 1:2#why???
-  plot(res$mds_res[,pcs], type = 'n',xlab = '', ylab = '')
-  text(res$mds_res[,pcs], labels = paste0(collapsed_data$Subject,collapsed_data$Electrode),
-       col = res$colors[res$clusters_res])
-  legend('topright', sprintf('Cluster %d', seq_along(unique(res$clusters_res))),
-                             bty='n', text.font = 2, text.col = res$colors[seq_along(unique(res$clusters_res))])
-  ravebuiltins:::rave_title(sprintf('%d %s %d %s',
-                                    length(res$collapsed$Electrode),
-                                    'electrodes across',
-                                    length(unique(res$collapsed$Subject)),
-                                    'patients'))
 
 }
 
 
+
 cluster_membership_table <- function(){
   
-  if(is.list(local_data$my_results)){
-    tbl = convert_cluster_table(local_data$my_results$cluster_table,
-                                split_by = 'Subject', var = "Cluster",
-                                value = "Electrode")
-    div(
-      style = 'overflow-x:scroll; height: 380px',
-      HTML(knitr::kable(tbl, format = 'html', row.names = FALSE,
-                        table.attr = 'class="table shiny-table table-striped"')) # spacing-xs
-    )
-  }else{
-    div(
+  tbl <- raveclusters::cluster_membership(local_data$results$cluster_table)
+  if(!is.data.frame(tbl)) {
+    return(div(
       style = 'height: 380px',
-    )
+    ))
   }
+  div(
+    style = 'overflow-x:scroll; height: 380px',
+    HTML(knitr::kable(tbl, format = 'html', row.names = FALSE,
+                      table.attr = 'class="table shiny-table table-striped"')) # spacing-xs
+  )
   
 }
 
 
 dendrogram_plot <- function() {
-  res <- local_data$my_results
+  results <- local_data$results
   
-  shiny::validate(shiny::need(!is.null(res$mse), message = 'Please press "Run Analysis" '))
+  shiny::validate(shiny::need(is.list(results) && length(results) > 1,
+                              message = 'Please press "Run Analysis"'))
+  shiny::validate(shiny::need(
+    identical(results$cluster_method, 'H-Clust'),
+    message = 'Only available for method = H-clust'
+  )) 
   
-  shiny::validate(shiny::need(input$input_method == 'H-Clust', 'Only available for method = H-clust'))
-  
-  shiny::validate(shiny::need('hclust' %in% class(local_data$cluster_method_output), message = 'Please press "Run Analysis" '))
-  
-  labels = res$collapsed %$% paste0(Subject, Electrode)
-  
-  n = length(labels)
-  k = res$input_nclusters
-  col = res$colors[1:k]
-  
-  leafCol <- function(x,col){
-    if(stats::is.leaf(x)){
-      attr(x,'label') <- labels[x]
-      attr(x, 'nodePar') <- list(lab.col = res$colors[res$clusters_res[x]],pch = 46,cex=0 )
-      attr(x, "edgePar") <- list(col = res$colors[res$clusters_res[x]])
-    }else{
-      if (is.null(attr(x, "edgePar"))) {
-        attr(x, "edgePar") <- list(col = col)
-      }
-    }
-    unclass(x)
-  } 
-
-  #set lay out
-  layout(matrix(1:2, ncol=2),
-         widths = c(3/4, 1/4))
-  
-  par(cex = .7, mar = c(0,1,0,1))
-  
-  # define the dendrogram
-  dend <- as.dendrogram(local_data$cluster_method_output)
-  
-  #color the nodes(leaves) and branches of the dendrogram (from dendextend package color_branches)
-  g <- dendextend::cutree(local_data$cluster_method_output,k = k,h = NULL)
-  descendTree <- function(sd) {
-    groupsinsubtree <- unique(g[labels(sd)])
-    if (length(groupsinsubtree) > 1) {
-      for (i in seq(sd)) {
-        sd[[i]] <- descendTree(sd[[i]])
-      }
-    }
-    else {
-      sd <- dendrapply(sd, leafCol,col[groupsinsubtree])
-      # if (!is.null(groupLabels)) {
-      #   attr(sd, "edgetext") <- groupLabels[groupsinsubtree]
-      #   attr(sd, "edgePar") <- c(attr(sd, "edgePar"), 
-      #                            list(p.border = col[groupsinsubtree]))
-      # }
-    }
-    unclass(sd)
-  }
-  
-  dend <- descendTree(dend) 
-  class(dend) <- 'dendrogram'
-  
-  #plot the horizontal dendrogram
-  plot(dend,las = 1,horiz = TRUE, yaxt='n',#remove the y axis and labels
-       ylim = c(0, n+1))
-
-  
-  #add clustering cutting line
-  MidPoint = (local_data$cluster_method_output$height[n-k] + local_data$cluster_method_outpu$height[n-k+1]) / 2
-  abline(v = MidPoint, lty=2)
-  
-  # ravebuiltins:::rave_title(sprintf('%s %d %s %d %s','Hierarchical clustering of',
-  #                                   length(res$collapsed$Electrode),
-  #                                   'electrodes across',
-  #                                   length(unique(res$collapsed$Subject)),'patients'),cex = 1.5)
-  legend('topleft', sprintf('Cluster %d', seq_along(unique(res$clusters_res))),
-                             bty='n', text.font = 2, cex=1.5, text.col = res$colors[seq_along(unique(res$clusters_res))])
-    # legend('topleft', legend=paste0('clust', rev(runle$values)),
-    #      cex=1, text.col = 1 + rev(runle$values), bty='n')
-
-  # plot_signals2 <- function(signals, space, ylim1 = c(0, 1), ...){
-  #   space <- stats::quantile(signals, space, na.rm = TRUE) * 2
-  #   nr <- nrow(signals)
-  #   ylim0 <- range(seq_len(nr) * space + signals, na.rm = TRUE)
-  #   scale <- (ylim1[2] - ylim1[1]) / (ylim0[2] - ylim0[1])
-  #   space <- space * scale
-  #   signals <- (signals - ylim0[1]) * scale + ylim1[1]
-  #   
-  #   plot_clean(xlim = c(1, ncol(signals)), ...)
-  #   
-  #   plot_signals(signals = signals, space = space, space_mode = "asis", 
-  #                new_plot = FALSE)
-  # }
-  # 
-  # plot_signals2(res$indata, space = 0.99, ylim = c(-1, n+2), ylim1 = c(0, n+1))
-  
-  plot_clean(xlim = c(0,1), ylim = c(0,n+1))
-  image( t(res$indata[order.dendrogram(dend),]),  y=1:n,
-        col= hcl.colors(100, palette = "BluYl",rev = TRUE),
-        yaxt = 'n',bty = 'n', xaxt= 'n', add = TRUE)
+  raveclusters::cluster_dendrogram(results)
   
 }
 
 optimal_cluster_number_plot <- function(){
-  res <- local_data$my_results
+  results <- get_pipeline_results(fast_ok = TRUE)
   
   shiny::validate(
-    shiny::need(isTRUE(input$op_run), message = 'Click the checkbox to enable'), 
-    shiny::need(!is.null(res)&&!is.null(res$indata), message = 'Please press "Run Analysis" after loading data')
+    shiny::need(is.matrix(results$indata_analysis), 
+                message = 'Please adjust (narrow) the analysis time window')
   )
-    
-  rave::set_rave_theme()#why
-  #, message = 'Please press "Optimal Number of Clusters Analysis" '))
- # observe(input$op_run,{  
   
-  methods = c('silhouette','wss')
-  if (input$input_method == "H-Clust"){
-    clustfun = factoextra::hcut
-  } else if (input$input_method == "K-Medois") {
-    clustfun = cluster::pam
-  }
-  par(mfrow= c(1,2))
-  
-  op_res <- lapply(methods, function(x){
-    factoextra::fviz_nbclust(res$indata,FUNcluster = clustfun, method =x, 
-                             diss = res$dis,
-                             k.max = 8)
-  })
-  junk <- lapply(op_res, function(x){
-    plot(x$data$y, pch = 12, type = 'o', xlab = x$labels$x, ylab =x$labels$y, lwd=2,las = 1)
-    lst <- sort(x$data$y, index.return=TRUE, decreasing=TRUE)
-    if(!is.null(x$labels$xintercept)){
-      points(lst$ix[1:3],lst$x[1:3],col = 'red',pch =19)
-      legend('topright', sprintf('%s %s','suggested number of clusters',
-                                 paste(lst$ix[1:3], collapse = ', ')),  
-             bty='n', text.font = 2)
-      #the return value of paste(1,2,3) is different from paste(c(1:3))
-      }
+  methods = c('silhouette', 'wss')
+  clustfun <- switch(
+    results$cluster_method,
+    `K-Medois` = cluster::pam,
+    {
+      factoextra::hcut
     }
   )
-  #})
-
+  
+  indata_analysis <- results$indata_analysis
+  rownames(indata_analysis) <- NULL
+  dis <- as.matrix(results$dis)
+  
+  nobs <- nrow(indata_analysis)
+  if(nobs > 60) {
+    cv_fold <- 1
+  } else if(nobs > 30) {
+    cv_fold <- 5
+  } else {
+    cv_fold <- 10
+  }
+  
+  par(mfrow = c(1, 2))
+  
+  for(method in methods) {
+    cluster_idx_plot(
+      indata_analysis, dis = dis, clustfun = clustfun,
+      method = method, col = "dodgerblue3", cv_fold = cv_fold
+    ) 
+  }
+  
 }
 
 
@@ -460,121 +391,34 @@ cluster_plot <-  function(){
   
   raveclusters::cluster_visualization(
     results, color_scheme = "Beautiful Field",
-    cex = shiny_cex.main, 
-    plot_range = input$plot_time_window)
+    cex = 1, plot_range = input$plot_time_window)
   
 }
   
 
 viewer_3d_fun <- function(...){
   # brain = rave::rave_brain2('congruency/YAB')
-  res <- local_data$my_results
+  results <- local_data$results
   
-  subjects = local_data$analysis_data_raw$subjects
-  project_name = subject$project_name
-  
-  tbl = res$cluster_table
-  tbl$Cluster = paste('Cluster', tbl$Cluster)
-  tbl$Project = project_name
-
   shiny::validate(
-    shiny::need(is.data.frame(tbl), message = 'Please import data and run analysis')
+    shiny::need(is.data.frame(results$cluster_table), 
+                message = 'Please import data and run analysis')
   )
   
-  roi_varname <- isolate(input$model_roi_variable)
-  if(length(roi_varname) == 1){
-    tbl[[roi_varname]] = res$roi
-  }
+  widget <- raveclusters::cluster_on_brain(results)
   
-  brain = lapply(subjects, function(sub){
-    rave::rave_brain2(sprintf('%s/%s', project_name, sub))
-  })
-  
-  brain <- dipsaus::drop_nulls(brain)
-  if(length(subjects) > 1){
-    brain = threeBrain::merge_brain(.list = brain)
-    
-    all_electrodes <- do.call('rbind', lapply(brain$objects, function(b){
-      elecs <- b$electrodes$raw_table$Electrode
-      etbl <- data.frame(
-        Subject = b$subject_code,
-        Electrode = elecs,
-        Selected = elecs %in% tbl$Electrode[tbl$Subject == b$subject_code]
-      )
-    }))
-    
-    
-  } else if(!length(brain)) {
-    # show message like "no brain exists"
-    message('there is no brain data exists')
-  } else {
-    brain <- brain[[1]]
-    elecs <- brain$electrodes$raw_table$Electrode
-    all_electrodes <- data.frame(
-      Subject = brain$subject_code,
-      Electrode = elecs,
-      Selected = elecs %in% tbl$Electrode
-    )
-  }
-
-  
-  brain$set_electrode_values(tbl)
-  brain$set_electrode_values(all_electrodes)
-  
-  brain$plot(
-    side_width = 160, side_shift = c(0,0), 
-    palettes = list(
-      'Cluster' = res$colors,
-      'Selected' = c("black", '#1B9E77'),
-      '[Subject]' = 'black'
-    )
+  shiny::validate(
+    shiny::need(
+      inherits(widget, "threejs_brain"), 
+      message = local({
+        if(!is.character(widget)) {
+          widget <- "Cannot generate 3D viewer"
+        }
+        widget
+      }))
   )
+  
+  widget
 }
 
-
-# cluster_plot2 <- function(){
-#   res <- local_data$my_results
-#   
-#   shiny::validate(
-#     shiny::need(!is.null(res$cluster_means), message = 'Please press "Run Analysis" button.')
-#   )
-#   
-#   if( res$input_nclusters <= 3 ){
-#     par(mfrow = c(1, res$input_nclusters))
-#   }else{
-#     nrow = ceiling(res$input_nclusters / 3)
-#     par(mfrow = c(nrow, 3))
-#   }
-#   
-#   time_points = as.numeric(names(res$indata))#preload_info$time_points
-#   
-# cluster_vis <- mapply(function(cm, ii) {
-#   
-#     rutabaga::plot_clean(time_points, ylim=c(-100, 500)) ##FIXME
-#     gnames = list()
-#     cols = NULL
-#     
-#     for( j in seq_along(input_groups) ){
-#       g = input_groups[[j]]
-#       conditions = g$group_conditions
-#       gnames[[j]] = g$group_name
-#       lines(time_points, colMeans(res$indata[which(res$collapsed$ConditionGroup %in% g$group_name & res$clusters_res ==ii),]),
-#             col=j)
-#       
-#       cols = c(cols, j)
-#     }
-#     
-#     # lines(baselined$dimnames$Time, colMeans(cm[which(baselined$dimnames$Trial %in% v_trials),]),
-#     #       col="#377EB8")
-#     
-#     legend('topright', unlist(gnames), bty='n', text.font = 2,
-#            text.col = cols)
-#     text(quantile(time_points, 0.15),200, paste0('n_elec=', sum(res$clusters_res == ii)))# didn't work
-#     title(main=rutabaga::deparse_svec(res$collapsed$Electrode[which(ii == res$clusters_res)]))
-#     
-#     rutabaga::ruta_axis(1, pretty(time_points))
-#     rutabaga::ruta_axis(2, pretty(-100:1000))
-#     
-#   }, res$cluster_means, seq_along(res$cluster_means))
-# }
 

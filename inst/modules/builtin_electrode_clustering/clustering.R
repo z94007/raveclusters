@@ -10,38 +10,53 @@ shiny::bindEvent(
   observe({
     
     # TODO: do some basic checks before running pipeline
+    shiny::removeNotification(id = session$ns("error_notif"))
+    
+    if(!is.list(local_data$source_data) || 
+       !length(local_data$source_data)) {
+      return()
+    }
     
     # set parameters
     # opt <- raveclusters::ravecluster_default_opts()
+    tryCatch({
+      results <- raveclusters::ravecluster(
+        names = c(
+          "settings",
+          "project", "collapsed", "cluster_method",
+          "condition_groups", "collapsed_array", "mse", "dis", "use_baseline",
+          "baseline", "indata_analysis", "indata_plot", "cluster_table",
+          "input_nclusters", "analysis_time_window", "plot_time_window",
+          "power_unit", "mds_result"
+        ),
+        input_groups = input$input_groups,
+        use_baseline = input$check_scale,
+        baseline_time = input$baseline_time,
+        distance_method = input$distance_method,
+        hclust_method = input$hclust_method,
+        cluster_method = input$input_method,
+        input_nclusters = input$input_nclusters,
+        roi_options = list(
+          variable = input$model_roi_variable,
+          values = input$filter_by_roi,
+          roi_ignore_gyrus_sulcus = input$roi_ignore_gyrus_sulcus,
+          roi_ignore_hemisphere = input$roi_ignore_hemisphere
+        ),
+        analysis_time_window = input$time_window,
+        plot_time_window = input$plot_time_window,
+        color_scheme = "Dark2",
+        power_unit = input$power_unit,
+        analysis_event = input$epoch_event,
+        mds_distance = input$mds_distance_method
+      )
+      
+      local_data$results <- results
+      local_data$fast_results <- results
+    }, error = function(e){
+      
+      shiny::showNotification(e$message, duration = NULL, id = session$ns("error_notif"), type = "error")
+    })
     
-    results <- raveclusters::ravecluster(
-      names = c(
-        "condition_groups", "collapsed_array", "mse", "dis", "use_baseline",
-        "baseline", "indata_analysis", "indata_plot", "cluster_table",
-        "input_nclusters", "analysis_time_window", "plot_time_window",
-        "power_unit"
-      ),
-      input_groups = input$input_groups,
-      use_baseline = input$check_scale,
-      baseline_time = input$baseline_time,
-      distance_method = input$distance_method,
-      hclust_method = input$hclust_method,
-      cluster_method = input$input_method,
-      input_nclusters = input$input_nclusters,
-      roi_options = list(
-        variable = input$model_roi_variable,
-        values = input$filter_by_roi,
-        roi_ignore_gyrus_sulcus = input$roi_ignore_gyrus_sulcus,
-        roi_ignore_hemisphere = input$roi_ignore_hemisphere
-      ),
-      analysis_time_window = input$time_window,
-      plot_time_window = input$plot_time_window,
-      color_scheme = "Dark2",
-      power_unit = input$power_unit,
-      analysis_event = input$epoch_event
-    )
-    
-    local_data$results <- results
     
   }),
   input$do_run,
