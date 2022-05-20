@@ -3,7 +3,7 @@
 # ----------------------------------- Debug ------------------------------------
 require(raveclusters)
 
-env = dev_raveclusters(T)
+env = dev_raveclusters(TRUE)
 
 #' Load subject for debugging
 #' Make sure this is executed before developing the module to make sure
@@ -19,10 +19,11 @@ rave::mount_demo_subject()
 #  ----------------------  Initializing Global variables -----------------------
 
 load_scripts(
+  get_path('inst/modules/builtin_electrode_clustering/input-reactives.R'),
   get_path('inst/modules/builtin_electrode_clustering/reactives.R'),
   get_path('inst/modules/builtin_electrode_clustering/outputs.R'),
   get_path('inst/modules/builtin_electrode_clustering/clustering.R'),
-  get_path('inst/modules/builtin_electrode_clustering/roi_reactives.R'),
+  # get_path('inst/modules/builtin_electrode_clustering/roi_reactives.R'),
   get_path('inst/modules/builtin_electrode_clustering/table_apply_roi.R'),
   #get_path('inst/modules/builtin_electrode_clustering/clustering_evaluation.R'),
   asis = TRUE)
@@ -46,11 +47,37 @@ load_scripts(
 
 #  ---------------------------------  Inputs -----------------------------------
 
-define_input_analysis_data_fst(
-  inputId= 'analysis_data', label = "Data files located in this project's RAVE directory", 
-  paths = c('_project_data/group_analysis_lme/source', '_project_data/power_explorer/exports'),
-  reactive_target = 'local_data$analysis_data_raw', try_load_yaml = TRUE
+define_input(
+  shiny::selectInput(
+    inputId = "data_import_selector", 
+    label = "Data files located in this project's RAVE directory",
+    choices = character(0L),
+    multiple = TRUE
+  ), 
+  init_args = c("choices", "selected"),
+  init_expr = {
+    project <- raveio::as_rave_project(subject$project_name)
+    search_paths <- file.path(project$group_path("power_explorer"), "exports")
+    
+    choices <- raveclusters::scan_power_explorer_exports(
+      search_paths = search_paths, pattern = '\\.fst$')
+    selected <- character(0L)
+  }
 )
+
+define_input(
+  dipsaus::actionButtonStyled(
+    inputId = "data_import_btn",
+    label = "Load selected data",
+    type = "primary", width = "100%"
+  )
+)
+
+# define_input_analysis_data_fst(
+#   inputId= 'analysis_data', label = "Data files located in this project's RAVE directory", 
+#   paths = c('_project_data/group_analysis_lme/source', '_project_data/power_explorer/exports'),
+#   reactive_target = 'local_data$analysis_data_raw', try_load_yaml = TRUE
+# )
 
 define_input(
   definition = checkboxInput(inputId = 'check_scale', label = 'Z-score data',
@@ -173,9 +200,25 @@ define_input(
 )
 
 define_input(
-  definition = selectInput(inputId = 'trial_selected', label = 'Select events',
-                           choices = '', selected = character(0),multiple = TRUE)
+  definition = selectInput(
+    inputId = 'power_unit',
+    label = 'Unit',
+    choices = '',
+    selected = character(0),
+    multiple = FALSE
+  )
 )
+
+define_input(
+  definition = selectInput(
+    inputId = 'epoch_event',
+    label = 'Events',
+    choices = '',
+    selected = character(0),
+    multiple = TRUE
+  )
+)
+
 define_input(
   definition = checkboxInput(inputId = 'op_run', label = 'Optimal Number of Clusters Analysis',
                              value = FALSE)
@@ -215,7 +258,9 @@ define_input(
 
 input_layout = list(
   'Data Import' = list(
-    'analysis_data'
+    'data_import_selector',
+    'data_import_btn'
+    # 'analysis_data'
   ),
   #[#99ccff][-]
   'Trial Selector' = list(
@@ -223,7 +268,9 @@ input_layout = list(
     'input_groups'
   ),
   'Analysis Settings' = list(
-    'trial_selected',
+    # 'trial_selected',
+    "power_unit",
+    "epoch_event",
     c('model_dependent'),#should be deleted?
     c('model_roi_variable','filter_by_roi'),
     c('roi_ignore_hemisphere', 'roi_ignore_gyrus_sulcus'),
@@ -244,8 +291,11 @@ input_layout = list(
   )
 )
 
-manual_inputs = c(
+manual_inputs <- c(
   'graph_export','analysis_data', 'input_baseline_range', 
+  'data_import_selector',
+  'data_import_btn',
+  "power_unit", "epoch_event", "time_window",
   # 'text_electrode', 
   'input_frequencies', 'input_groups', 'input_nclusters',
   'input_method', unlist(sapply(1:20, function(ii){ paste0('input_groups_', c('group_name', 'group_conditions'), '_', ii) })),

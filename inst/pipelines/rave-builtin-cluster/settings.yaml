@@ -20,7 +20,7 @@ input_groups:
   - drive_av
 source_files: 
   - YAK_demo_export-20210525-082018.fst
-  - YCK_pow_by_cond-20211214-141952.fst
+  - junk-YCK_pow_by_cond-20211214-141952.fst
 baseline_time:
 - -1.0
 - 0.0
@@ -29,21 +29,20 @@ distance_method: manhattan
 hclust_method: ward.D2
 roi_options:
   variable: Hemisphere
+  value: 
+    - right
+    - left
   roi_ignore_gyrus_sulcus: no
   roi_ignore_hemisphere: no
 analysis_event: Trial_Onset
 input_nclusters: 3.0
-input_method: H-Clust
+cluster_method: H-Clust
 plot_time_window:
 - 0.0
 - 1.5
-check_scale: 'TRUE'
-filter_by_roi: 
-  - right
-  - left
-baseline_method: 
-  - z_score_Amplitude
-  - Pct_Change_Power
-time_window:
+use_baseline: yes
+power_unit: z_score_Amplitude
+analysis_time_window:
 - 0.0
 - 0.6
+color_scheme: Dark2

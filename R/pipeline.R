@@ -1,7 +1,15 @@
 #' @export
 ravecluster_default_opts <- function(){
+  pipeline_name <- "rave-builtin-cluster"
   original_path <- system.file("pipelines", pipeline_name, package = "raveclusters")
   raveio::pipeline_settings_get(pipeline_settings_path = file.path(original_path, "settings.yaml"))
+}
+
+#' @export
+ravecluster_target_names <- function(){
+  pipeline_name <- "rave-builtin-cluster"
+  path <- system.file("pipelines", pipeline_name, package = "raveclusters")
+  unname(raveio::pipeline_target_names(path))
 }
 
 #' @export
@@ -39,16 +47,12 @@ ravecluster <- function(names, ...,
   
   # get current options
   args <- list(...)
-  nms <- attr(args, "names")
-  if(length(nms)) {
-    nms <- nms[!nms %in% ""]
-    if(length(nms)) {
-      args <- args[nms]
-      settings_path <- file.path(pipeline_path, "settings.yaml")
-      settings <- raveio::load_yaml(settings_path)
-      dipsaus::list_to_fastmap2(args, map = settings)
-      raveio::save_yaml(settings, settings_path)
-    }
+  print(args)
+  if(length(args)) {
+    settings_path <- file.path(pipeline_path, "settings.yaml")
+    settings <- raveio::load_yaml(settings_path)
+    dipsaus::list_to_fastmap2(args, map = settings)
+    raveio::save_yaml(settings, settings_path)
   }
   
   

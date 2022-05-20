@@ -451,171 +451,105 @@ optimal_cluster_number_plot <- function(){
 
 cluster_plot <-  function(separate = FALSE, cex.main = shiny_cex.main){
   
+  old_pal <- palette()
   
-  palette(ravebuiltins::get_palette("Beautiful Field")) #condition group color code
+  cols <- get_palette("Beautiful Field")
+  palette(cols) # condition group color code
+  on.exit({ palette(old_pal) }, add = TRUE, after = TRUE)
   
-  res <- local_data$my_results
+  # results <- ravecluster()
+  results <- local_data$results
   
-  shiny::validate(shiny::need(!is.null(res$mse), message = 'Please press "Run Analysis" '))
+  shiny::validate(shiny::need(is.list(results) && !is.null(results$mse), 
+                              message = 'Please press "Run Analysis" button'))
   
-  nclust = max(res$clusters_res)
+  use_baseline <- results$use_baseline
+  power_unit <- results$power_unit
+  nclust <- attr(results$cluster_table, "nclusters")
+  cluster_color <- attr(results$cluster_table, "color_space")
+  cluster_idx <- attr(results$cluster_table, "cluster_idx")
+  plot_time_window <- results$plot_time_window
+  actual_plot_window <- input$plot_time_window
+  analysis_time_window <- results$analysis_time_window
+  mse <- results$mse
+  group <- results$condition_groups
+  group_names <- sapply(group, "[[", "group_name")
   
-  #rave::set_rave_theme()
-  if( separate ){
-    
-  } else {
+  dnames <- dimnames(mse)
+  dnames$Time <- as.numeric(dnames$Time)
+  
+  bg_analysis_rect <- rgb(red = 1, green = 0, blue = 0, alpha = 0.1)
+  
+  # Prepare canvas
+  if( !separate ){
     if( nclust <= 4 ){
       par(mfrow = c(1, nclust))
     }else{
-      nrow = ceiling((nclust) / 4)
+      nrow <- ceiling((nclust) / 4)
       par(mfrow = c(nrow, 4))
     }
     par(mar = c(4.1,4.1, 4.1, 2))
   }
   
+  # Calculate ylim
+  yrange <- c(
+    min(mse[,1,,] - mse[,2,,], mse[,1,,], na.rm = TRUE),
+    max(mse[,1,,] + mse[,2,,], mse[,1,,], na.rm = TRUE)
+  )
+  xrange <- range(actual_plot_window)
+  xaxi <- pretty(xrange)
+  yaxi <- pretty(yrange)
   
-  
-
-  time_points_plot =  unique(local_data$analysis_data_raw$data$Time[local_data$analysis_data_raw$data$Time 
-                                                               %within% res$time_range_plot])
-  
-  time_points =  time_points_plot[time_points_plot %within% res$time_range]
-  
-  n_timepoints_plot = length(time_points_plot)
-  
-  n_timepoints = length(time_points)
-  
-  group_names = res$group_names
-  n_cond_groups = length(group_names)
-  
-  var_name = input$trial_selected
-  n_var = length(var_name)
-  
-  yrange = c(min(sapply(res$mse, function(x){
-    x[2,is.na(x[2,])] = 0 # replace na with 0
-    min(x[1,]-x[2,], na.rm = TRUE)
-  }))
-  ,max(sapply(res$mse, function(x){
-    x[2,is.na(x[2,])] = 0
-    max(colSums(x), na.rm = TRUE)
-  })))
-  xaxi = pretty(time_points_plot)
-  yaxi = pretty(yrange)
-  
-  
-  cache <- dipsaus::iapply(res$mse,function(x, cl_idx){
+  # for each cluster
+  lapply(seq_along(cluster_color), function(ii){
+    ccol <- cluster_color[ii]
     
-    # debug settings
-    # x = res$mse[[1]]
-    # cl_idx = 1
-    # time_points = preload_info$time_points
-    
-    cl_mean = x[1,]
-    cl_sd = x[2,]
-    
-    
-    # case 1 variable y-lim
-    #FIXME#yrange = range(cl_mean, cl_mean+cl_sd, cl_mean-cl_sd, na.rm = TRUE)#keep it?
-    # case 2 fixed yrange for all plots
-    #rutabaga::plot_clean(time_points, ylim=yrange) ##FIXME
-    
-    # set colors and layout canvase
-    cols = seq_len(n_cond_groups)
-
-    rutabaga::plot_clean(xlim = res$time_range_plot, ylim=range(yaxi))
+    # create a plot
+    rutabaga::plot_clean(xlim = xrange, ylim = yrange)
     rutabaga::ruta_axis(2, yaxi)
-    rutabaga::ruta_axis(1, labels = xaxi, at=xaxi)#n_timepoints_plot*xaxi/res$time_range_plot[2])
+    rutabaga::ruta_axis(1, labels = xaxi, at = xaxi)
     
-    #plot the rectangle of analysis window
-    x_rect <- res$time_range
+    # plot the rectangle of analysis window
+    x_rect <- analysis_time_window
     y_rect <- yrange
+    rect(x_rect[1], y_rect[1], x_rect[2], y_rect[2],
+         col = bg_analysis_rect, border = NA)
+    # FIXME: the location of this should not overlap with the legend of group condition
+    legend(0.7 * x_rect[2] + 0.3 * x_rect[1], y_rect[2],
+           'Analysis', text.col = 'red', bty='n', 
+           text.font = 1, adj = 1)
     
-    rect(x_rect[1], y_rect[1],x_rect[2],y_rect[2],
-         col = rgb(red = 1, green = 0, blue = 0, alpha = 0.05), border = NA)
-    x_rect[1]+(x_rect[2]-x_rect[1])*.7
-    legend(x_rect[1]+(x_rect[2]-x_rect[1])*.7,
-           y_rect[2],'Analysis', text.col = 'red', bty='n', 
-           text.font = 1,)#FIXME#the location of this should not overlap with the legend of group conditon
+    # Add legends for each conditions
+    legend(x = xrange[[1]],y = max(yaxi), group_names, bty='n', 
+           text.font = 1, text.col = cols, cex = 1, adj = 0)
     
-    # plot the lines 
-    lapply(seq_len(n_cond_groups), function(j){
-
-
+    # generate ylab
+    ylab <- sprintf( "%s%s", power_unit, 
+                     ifelse(use_baseline, " (z-scored)", ""))[[1]]
+    mtext(ylab, side = 2, line = 2,cex = 1.5)
+    
+    # generate xlab
+    mtext('Time(s)', side = 1, line = 2,cex = 1.5)
+    
+    # Add title
+    ravebuiltins:::rave_title(
+      sprintf('Cluster%s (n=%s)', cluster_idx[ii],
+              sum(results$cluster_table$Cluster == cluster_idx[ii])),
+      col = ccol,
+      cex = cex.main
+    )
+    
+    # Plot!
+    lapply(seq_along(group), function(jj){
       
-      sel_sorted <- paste0(sort(time_points_plot),'_',j)
+      m <- mse[, 1, jj, ii]
+      se <- mse[, 2, jj, ii]
       
-      x_lim <- seq(res$time_range_plot[1],res$time_range_plot[2], 
-                   length.out = n_timepoints_plot)
-        
-      rutabaga::ebar_polygon(x_lim, cl_mean[sel_sorted], 
-                             sem = cl_sd[sel_sorted], col = cols[[j]])
+      rutabaga::ebar_polygon(dnames$Time, m, sem = se, col = jj)
       
     })
     
-    
-    
-    # add the line to seperate different events
-    #abline(v = n_timepoints, lty = 2,col = "gray")
-    
-    # add the legend of condition groups
-    lapply(seq_len(n_var), function(i){
-      #legend(x = (i-1)*n_timepoints,y = yrange[2], var_name[i], bty='n', text.font = 2,cex = 1)
-      legend(x = res$time_range_plot[1],y = range(yaxi)[2], group_names, bty='n', 
-             text.font = 1, text.col = cols, cex = 1)}
-    
-    )
-    
-    #label of y-axis
-    # if(input$check_scale){
-    #   y_label = 'z-scored'
-    # } else {
-    #   y_label = NULL
-    # }
-    # 
-    if (input$check_scale) {
-      ylab_scale = ' (z-scored)'
-    }else{
-      ylab_scle = " "
-    }
-    
-    event_name <- head(strsplit(input$trial_selected,'_')[[1]],-1)
-    
-    if (input$check_scale) {
-      mtext(paste0(paste(event_name, collapse = ' '), ' (z-scored)'), 
-            side = 2, line = 2,cex = 1.5)
-    }else{
-      mtext(paste(event_name, collapse = ' '), 
-            side = 2, line = 2,cex = 1.5)
-    }
-    
-    mtext('Time(s)', side = 1, line = 2,cex = 1.5)
-    # mtext('z-score % change Amplitude', side = 3, line = 0, at= 0)
-    
-    
-    # gc <- mapply(function(sub_x,ii){
-    #   lines(time_points, sub_x, col =ii)
-    #   cols <- c(cols,ii)
-    #   gnames <- c(gnames,input$input_groups[[ii]]$group_name)
-    #   print(input$input_groups[[ii]]$group_name)
-    #   return(list(gnames = gnames, cols = cols))
-    # }, x, seq_along(input$input_groups))
-      
-      #rutabaga::ruta_axis(1, xaxi)
-      #,labels = if(separate){}else{local_data$analysis_data_raw$headers[3]})
-     
-    ravebuiltins:::rave_title(
-      sprintf(
-        '%s%d (n=%d)',
-        'Cluster',
-        cl_idx,
-        sum(res$clusters_res == cl_idx)
-        ),
-      col = res$colors[cl_idx],
-      cex = cex.main
-      )
-
   })
-  
   
 }
 

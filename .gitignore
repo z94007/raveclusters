@@ -6,3 +6,5 @@ adhoc/
 .DS_Store
 docs
 Icon
+_rs_job.R
+ui.R

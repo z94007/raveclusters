@@ -51,4 +51,8 @@ dev_raveclusters <- function(expose_functions = FALSE, reload = TRUE){
   env
 }
 
+# Global variables
 
+#' @name raveclusters-globals
+#' @export
+RAVE_ROI_KEY <- "VAR_IS_ROI_"

@@ -15,8 +15,15 @@ build_pipeline <- raveio::configure_knitr()
 # Debug use
 # Please set working directory to be in the source file
 if(FALSE){
-  settings <- raveio::load_yaml('settings.yaml')
-  list2env(as.list(settings), envir = globalenv())
+  local({
+    f <- c(
+      file.path(tempdir(), "rave-builtin-cluster", '0.0.1', 'settings.yaml'),
+      'settings.yaml'
+    )
+    f <- f[file.exists(f)][[1]]
+    settings <- raveio::load_yaml(f)
+    list2env(as.list(settings), envir = globalenv())
+  })
 #   
   # settings$hclust_method <- "ward.D2"
   # raveio::save_yaml(settings, 'settings.yaml')
@@ -29,6 +36,24 @@ Let's start by printing the summary of this project
 library(raveio)
 project <- raveio::as_rave_project(project = project_name)
 project
+```
+
+Reformat `input_groups`, give them reasonable group names
+
+```{rave reformat_input_groups, export = "condition_groups"}
+condition_groups <- lapply(input_groups, function(group){
+  group_name = group$group_name
+  if(is.null(group_name)){
+    group_name = sprintf('Group %d', ii)
+  } else {
+    group_name <- trimws(group_name)
+    if(!nchar(group_name)) {
+      group_name <- sprintf('Group %d', ii)
+    }
+  }
+  group$group_name <- group_name
+  group
+})
 ```
 
 The next step is enter the project export folder and load data files exported by `Power Explorer` module. The folder can be found inside of `project$group_path("power_explorer")`, named `exports`. Package function `import_configurations (raveclusters)` is designed to load these data.
@@ -77,17 +102,25 @@ raw_table = raw_table[, !names(raw_table) %in% excluded_roi, with = FALSE]
 #select based on the ROI selector
 use_regex <- ( roi_options$roi_ignore_gyrus_sulcus || roi_options$roi_ignore_hemisphere )
 
+filter_by_roi <- roi_options$value
+na_rm <- TRUE
+if("N/A" %in% filter_by_roi) {
+  filter_by_roi <- filter_by_roi[!filter_by_roi %in% "N/A"]
+  na_rm <- FALSE
+}
+
 raw_table <- raveclusters::table_apply_roi(
   table = raw_table, roi_column = roi_var,
   roi = filter_by_roi, use_regex = use_regex,
-  na_rm = FALSE)
+  na_rm = na_rm)
 ```
 
 
 Parse the event selector to find corresponding column names in `source_data$data`
 
 ```{rave find_data_column_name, language = "R", export = "var_name"}
-var_name <- sprintf("%s_%s", baseline_method, analysis_event)
+var_name <- sprintf("%s_%s", power_unit, analysis_event)
+var_name <- var_name[var_name %in% names(source_data$data)]
 ```
 
 Collapse the filtered `source_data$data` again. This time calculate weighted mean (by trial count) for each group. This table contains the following columns:
@@ -102,10 +135,10 @@ Collapse the filtered `source_data$data` again. This time calculate weighted mea
 ```{rave collapse_data_by_condition_group, languae = "R", export = "collapsed"}
 library(rutabaga)
 library(data.table)
-collapsed = lapply(seq_along(input_groups), function( ii ){
+collapsed = lapply(seq_along(condition_groups), function( ii ){
 
   # get the condition groups
-  group = input_groups[[ ii ]]
+  group = condition_groups[[ ii ]]
   # group_name = group$group_name
   # 
   # 
@@ -120,7 +153,7 @@ collapsed = lapply(seq_along(input_groups), function( ii ){
 #                          raw_table$Time %within% plot_time_window, ]
 # 
 #   # data within analysis time window
-#   sub = sub_plot[sub_plot$Time %within% time_window, ]
+#   sub = sub_plot[sub_plot$Time %within% analysis_time_window, ]
 # 
 #   sub_plot$Time = paste0(sub_plot$Time, '_', ii)
 #   sub_time = paste0(sub$Time, '_',ii)
@@ -242,17 +275,23 @@ library(rutabaga)
 force(collapsed_array)
 time_table <- attr(collapsed_array, "time_table")
 
-baseline <- lapply(seq_along(input_groups), function( ii ){
+baseline <- lapply(seq_along(condition_groups), function( ii ){
   column_sel <- time_table$Group == ii
-  baseline_sel <- column_sel & (time_table$Time %within% baseline_time)
   
-  bl <- collapsed_array[, baseline_sel, drop = FALSE]
-  blmean <- rowMeans(bl, na.rm = TRUE)
-  if(sum(baseline_sel) < 2) {
-    stop("Cannot z-score data. Please increase your baseline range.")
+  if(use_baseline) {
+    baseline_sel <- column_sel & (time_table$Time %within% baseline_time)
+  
+    bl <- collapsed_array[, baseline_sel, drop = FALSE]
+    blmean <- rowMeans(bl, na.rm = TRUE)
+    if(sum(baseline_sel) < 2) {
+      stop("Cannot z-score data. Please increase your baseline range.")
+    }
+    blstdev <- apply(bl, 1, stats::sd, na.rm = TRUE)
+    re <- ((collapsed_array[, column_sel, drop = FALSE]) - as.vector(blmean)) / as.vector(blstdev)
+    
+  } else {
+    re <- collapsed_array[, column_sel, drop = FALSE]
   }
-  blstdev <- apply(bl, 1, stats::sd, na.rm = TRUE)
-  re <- ((collapsed_array[, column_sel, drop = FALSE]) - as.vector(blmean)) / as.vector(blstdev)
   
   list(
     data = re,
@@ -276,7 +315,7 @@ The matrix `baseline_array` is not that useful for the following considerations:
 3. Some rows might have `NA` within analysis time-window, and we need to remove these rows.
 
 Therefore our strategy is to:
-* For each group, slice the columns (`baseline` list items) such that the corresponding time points fall within the `time_window`
+* For each group, slice the columns (`baseline` list items) such that the corresponding time points fall within the `analysis_time_window`
 * Column-bind the sliced data
 * Find complete cases (`complete.cases (stats)`) of the matrix
 * Subset, yield `indata_analysis`
@@ -290,7 +329,7 @@ library(rutabaga)
 # Filter by analysis window first
 indata_analysis <- lapply(baseline, function(item){
   # item <- baseline[[1]]
-  item$data[, item$time %within% time_window, drop = TRUE]
+  item$data[, item$time %within% analysis_time_window, drop = TRUE]
 })
 indata_analysis <- do.call("cbind", indata_analysis)
 
@@ -313,9 +352,12 @@ sel <- attr(indata_analysis, "complete_cases")
 # Filter by analysis window first
 indata_plot <- lapply(baseline, function(item){
   # item <- baseline[[1]]
-  item$data[sel, , drop = TRUE]
+  cols <- item$time %within% plot_time_window
+  list(
+    time = item$time[cols],
+    data = item$data[sel, cols, drop = TRUE]
+  )
 })
-indata_plot <- do.call("cbind", indata_plot)
 ```
 
 Calculate the distance matrix based on `indata_analysis`
@@ -341,10 +383,10 @@ item_table <- attr(collapsed_array, "item_table")
 sel <- attr(indata_analysis, "complete_cases")
 item_table <- item_table[sel, , drop = FALSE]
 
-if (input_method == "H-Clust"){
+if (cluster_method == "H-Clust"){
   hcl = stats::hclust(dis, method = hclust_method)
   item_table$Cluster <- stats::cutree(hcl, k = n_clust)
-} else if (input_method == "PAM") {
+} else if (cluster_method == "PAM") {
   km <- cluster::pam(dis, k = n_clust,  cluster.only = TRUE, 
                      keep.data = FALSE, 
                      keep.diss = FALSE)
@@ -365,23 +407,67 @@ Calculate mean and standard error of mean on the data slice, used to generate pl
 library(dipsaus)
 cluster_idx <- sort(unique(clusters$Cluster))
 
-mse <- lapply(cluster_idx, function(ci){
-  apply(
-    indata_plot[clusters$Cluster == ci,,drop = FALSE], 2, function(x){
-      dipsaus::mean_se(x, na.rm = TRUE, se_na_as_zero = TRUE)
-    })
-})
-# mse <- lapply(cluster_idx, function(ci){
-#   ### Question: collapsed data or baselined?
-#   baseline
-#   apply(collapsed_data[clusters == ci,
-#                   !names(collapsed_data) %in% c('Subject', 'Electrode', roi_var),
-#                   drop=FALSE], 
-#         2, dipsaus::mean_se)
+# get time range
+time <- sort(unique(unlist(lapply(indata_plot, "[[", "time"))))
+
+# time x (mean, se) x condition group x cluster
+mse <- array(NA_real_, c(length(time), 2, length(indata_plot), length(cluster_idx)))
+
+for(ii in seq_along(cluster_idx)) {
+  ci <- cluster_idx[[ii]]
+  
+  for(jj in seq_along(indata_plot)) {
+    item <- indata_plot[[jj]]
+    
+    sel <- time %in% item$time
+    
+    group_mse <- apply(item$data[clusters$Cluster == ci,,drop = FALSE], 2, 
+                 dipsaus::mean_se, na.rm = TRUE, se_na_as_zero = FALSE)
+    
+    mse[sel, , jj, ii] <- t(group_mse)
+  }
+}
+
+dimnames(mse) <- list(
+  Time = time,
+  Stat = c("mean", "mse"),
+  Group = seq_along(indata_plot),
+  Cluster = cluster_idx
+)
+
+# 
+# mse <- lapply(indata_plot, function(item){
+#   # item <- indata_plot[[1]]
 #   
+#   list(
+#     time = item$time,
+#     mse = apply(item$data[clusters$Cluster == ci,,drop = FALSE], 2, 
+#                 function(x) {
+#                   dipsaus::mean_se(x, na.rm = TRUE, se_na_as_zero = TRUE)
+#                 })
+#   )
 # })
+
 ```
 
+
+Assign each row a color
+
+```{rave assign_color, export = "cluster_table"}
+cluster_table <- clusters
+ns <- asNamespace("raveclusters")
+colors = ns$get_palette(color_scheme)
+cluster_idx <- sort(unique(clusters$Cluster))
+colors <- colors[seq_along(cluster_idx)]
+names(colors) <- cluster_idx
+
+cluster_table$Color <- colors[clusters$Cluster]
+attr(cluster_table, "color_space") <- colors
+
+attr(cluster_table, "cluster_idx") <- cluster_idx
+attr(cluster_table, "nclusters") <- length(cluster_idx)
+head(cluster_table)
+```
 
 ## Pipeline Visualization
 
