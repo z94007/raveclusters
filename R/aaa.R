@@ -28,7 +28,14 @@
 
 NULL
 
-shiny_cex.main = 1.5
+#' @name raveclusters-globals
+#' @title Global variables used by 'RAVE' clustering module
+#' @export
+RAVE_ROI_KEY <- "VAR_IS_ROI_"
+
+#' @rdname raveclusters-globals
+#' @export
+shiny_cex.main <- 1.5
 
 #' Function to load all dev funtions and wrap them within an environment
 #' @param expose_functions logical indicating whether to expose all dev functions to the global environment
@@ -53,6 +60,4 @@ dev_raveclusters <- function(expose_functions = FALSE, reload = TRUE){
 
 # Global variables
 
-#' @name raveclusters-globals
-#' @export
-RAVE_ROI_KEY <- "VAR_IS_ROI_"
+

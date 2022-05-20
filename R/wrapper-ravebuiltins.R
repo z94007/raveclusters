@@ -50,3 +50,17 @@ get_palette <- function (pname, get_palettes = FALSE, get_palette_names = FALSE)
   }
   return(pal)
 }
+
+get_cex_for_multifigure <- function () 
+{
+  cex_multiplier <- 1
+  if (shiny::isRunning()) {
+    if (any(par("mfrow") > 2)) {
+      cex_multiplier = 1/0.66
+    }
+    else if (all(par("mfrow") == 2)) {
+      cex_multiplier <- 1/0.88
+    }
+  }
+  return(cex_multiplier)
+}

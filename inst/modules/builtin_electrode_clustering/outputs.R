@@ -449,13 +449,7 @@ optimal_cluster_number_plot <- function(){
 }
 
 
-cluster_plot <-  function(separate = FALSE, cex.main = shiny_cex.main){
-  
-  old_pal <- palette()
-  
-  cols <- get_palette("Beautiful Field")
-  palette(cols) # condition group color code
-  on.exit({ palette(old_pal) }, add = TRUE, after = TRUE)
+cluster_plot <-  function(){
   
   # results <- ravecluster()
   results <- local_data$results
@@ -463,113 +457,13 @@ cluster_plot <-  function(separate = FALSE, cex.main = shiny_cex.main){
   shiny::validate(shiny::need(is.list(results) && !is.null(results$mse), 
                               message = 'Please press "Run Analysis" button'))
   
-  use_baseline <- results$use_baseline
-  power_unit <- results$power_unit
-  nclust <- attr(results$cluster_table, "nclusters")
-  cluster_color <- attr(results$cluster_table, "color_space")
-  cluster_idx <- attr(results$cluster_table, "cluster_idx")
-  plot_time_window <- results$plot_time_window
-  actual_plot_window <- input$plot_time_window
-  analysis_time_window <- results$analysis_time_window
-  mse <- results$mse
-  group <- results$condition_groups
-  group_names <- sapply(group, "[[", "group_name")
   
-  dnames <- dimnames(mse)
-  dnames$Time <- as.numeric(dnames$Time)
-  
-  bg_analysis_rect <- rgb(red = 1, green = 0, blue = 0, alpha = 0.1)
-  
-  # Prepare canvas
-  if( !separate ){
-    if( nclust <= 4 ){
-      par(mfrow = c(1, nclust))
-    }else{
-      nrow <- ceiling((nclust) / 4)
-      par(mfrow = c(nrow, 4))
-    }
-    par(mar = c(4.1,4.1, 4.1, 2))
-  }
-  
-  # Calculate ylim
-  yrange <- c(
-    min(mse[,1,,] - mse[,2,,], mse[,1,,], na.rm = TRUE),
-    max(mse[,1,,] + mse[,2,,], mse[,1,,], na.rm = TRUE)
-  )
-  xrange <- range(actual_plot_window)
-  xaxi <- pretty(xrange)
-  yaxi <- pretty(yrange)
-  
-  # for each cluster
-  lapply(seq_along(cluster_color), function(ii){
-    ccol <- cluster_color[ii]
-    
-    # create a plot
-    rutabaga::plot_clean(xlim = xrange, ylim = yrange)
-    rutabaga::ruta_axis(2, yaxi)
-    rutabaga::ruta_axis(1, labels = xaxi, at = xaxi)
-    
-    # plot the rectangle of analysis window
-    x_rect <- analysis_time_window
-    y_rect <- yrange
-    rect(x_rect[1], y_rect[1], x_rect[2], y_rect[2],
-         col = bg_analysis_rect, border = NA)
-    # FIXME: the location of this should not overlap with the legend of group condition
-    legend(0.7 * x_rect[2] + 0.3 * x_rect[1], y_rect[2],
-           'Analysis', text.col = 'red', bty='n', 
-           text.font = 1, adj = 1)
-    
-    # Add legends for each conditions
-    legend(x = xrange[[1]],y = max(yaxi), group_names, bty='n', 
-           text.font = 1, text.col = cols, cex = 1, adj = 0)
-    
-    # generate ylab
-    ylab <- sprintf( "%s%s", power_unit, 
-                     ifelse(use_baseline, " (z-scored)", ""))[[1]]
-    mtext(ylab, side = 2, line = 2,cex = 1.5)
-    
-    # generate xlab
-    mtext('Time(s)', side = 1, line = 2,cex = 1.5)
-    
-    # Add title
-    ravebuiltins:::rave_title(
-      sprintf('Cluster%s (n=%s)', cluster_idx[ii],
-              sum(results$cluster_table$Cluster == cluster_idx[ii])),
-      col = ccol,
-      cex = cex.main
-    )
-    
-    # Plot!
-    lapply(seq_along(group), function(jj){
-      
-      m <- mse[, 1, jj, ii]
-      se <- mse[, 2, jj, ii]
-      
-      rutabaga::ebar_polygon(dnames$Time, m, sem = se, col = jj)
-      
-    })
-    
-  })
+  raveclusters::cluster_visualization(
+    results, color_scheme = "Beautiful Field",
+    cex = shiny_cex.main, 
+    plot_range = input$plot_time_window)
   
 }
-
-# cluster_plot1 <- function(){
-#   res <- local_data$my_results
-#   shiny::validate(shiny::need(!is.null(res$cluster_means), message = 'Please press "Run Analysis" '))
-#   
-#   time_points =  res$time_points
-#   ymax = max(unlist(res$cluster_means))
-#   xaxi = pretty(time_points)
-#   yaxi = pretty(c(-100, ymax))
-#   rutabaga::plot_clean(time_points, ylim=c(-100, ymax)) ##FIXME
-#   rutabaga::ruta_axis(1, xaxi)
-#   rutabaga::ruta_axis(2, yaxi)
-#   
-#   invisible(lapply(unique(res$clusters_res),function(x){
-#     lines(time_points, res$cluster_means[[x]], col = res$colors[as.character(x)])
-#   }))#FIXME
-# 
-# }
   
 
 viewer_3d_fun <- function(...){
