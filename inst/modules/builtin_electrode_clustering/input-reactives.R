@@ -12,6 +12,9 @@ local_data %?<-% reactiveValues(
   number_of_subjects = NULL
 )
 
+# Stores non-reactive values
+local_storage %?<-% dipsaus::fastmap2()
+
 base::print(session$ns(NULL))
 
 # Load data when `Load selected data` button is pressed

@@ -41,12 +41,15 @@ source("common.R", local = TRUE, chdir = TRUE)
         }), deps = "settings"), input_analysis_time_window = targets::tar_target_raw("analysis_time_window", 
         quote({
             settings[["analysis_time_window"]]
+        }), deps = "settings"), input_optim_clusters = targets::tar_target_raw("optim_clusters", 
+        quote({
+            settings[["optim_clusters"]]
+        }), deps = "settings"), input_debug = targets::tar_target_raw("debug", 
+        quote({
+            settings[["debug"]]
         }), deps = "settings"), input_cluster_method = targets::tar_target_raw("cluster_method", 
         quote({
             settings[["cluster_method"]]
-        }), deps = "settings"), input_plot_time_window = targets::tar_target_raw("plot_time_window", 
-        quote({
-            settings[["plot_time_window"]]
         }), deps = "settings"), input_color_scheme = targets::tar_target_raw("color_scheme", 
         quote({
             settings[["color_scheme"]]
@@ -91,17 +94,23 @@ source("common.R", local = TRUE, chdir = TRUE)
                   "exports")
                 source_data <- raveclusters::import_configurations(search_paths = search_paths, 
                   file_names = source_files)
-                print(names(source_data))
+                if (debug) {
+                  print(names(source_data))
+                }
                 source_data$data
             }
             return(source_data)
-        }), deps = c("project", "source_files"), cue = targets::tar_cue("thorough"), 
+        }), deps = c("project", "source_files", "debug"), cue = targets::tar_cue("thorough"), 
         pattern = NULL, iteration = "list"), get_ROI_var = targets::tar_target_raw(name = "roi_var", 
         command = quote({
             {
                 roi_list <- c("VAR_IS_ROI_Hemisphere", "VAR_IS_ROI_freesurferlabel", 
                   "VAR_IS_ROI_Group", "VAR_IS_ROI_Block")
-                roi_var <- paste0("VAR_IS_ROI_", roi_options$variable)
+                if (length(roi_options$variable)) {
+                  roi_var <- paste0("VAR_IS_ROI_", roi_options$variable)
+                } else {
+                  roi_var <- NULL
+                }
             }
             return(roi_var)
         }), deps = "roi_options", cue = targets::tar_cue("thorough"), 
@@ -121,15 +130,17 @@ source("common.R", local = TRUE, chdir = TRUE)
                 use_regex <- (roi_options$roi_ignore_gyrus_sulcus || 
                   roi_options$roi_ignore_hemisphere)
                 filter_by_roi <- roi_options$value
-                na_rm <- TRUE
-                if ("N/A" %in% filter_by_roi) {
-                  filter_by_roi <- filter_by_roi[!filter_by_roi %in% 
-                    "N/A"]
-                  na_rm <- FALSE
+                if (length(roi_var) && length(filter_by_roi)) {
+                  na_rm <- TRUE
+                  if ("N/A" %in% filter_by_roi) {
+                    filter_by_roi <- filter_by_roi[!filter_by_roi %in% 
+                      "N/A"]
+                    na_rm <- FALSE
+                  }
+                  raw_table <- raveclusters::table_apply_roi(table = raw_table, 
+                    roi_column = roi_var, roi = filter_by_roi, 
+                    use_regex = use_regex, na_rm = na_rm)
                 }
-                raw_table <- raveclusters::table_apply_roi(table = raw_table, 
-                  roi_column = roi_var, roi = filter_by_roi, 
-                  use_regex = use_regex, na_rm = na_rm)
             }
             return(raw_table)
         }), deps = c("source_data", "roi_var", "roi_options"), 
@@ -174,12 +185,14 @@ source("common.R", local = TRUE, chdir = TRUE)
                     melted_table
                   })
                 collapsed <- data.table::rbindlist(collapsed)
-                print(collapsed)
+                if (debug) {
+                  print(collapsed)
+                }
             }
             return(collapsed)
         }), deps = c("condition_groups", "roi_var", "raw_table", 
-        "var_name"), cue = targets::tar_cue("thorough"), pattern = NULL, 
-        iteration = "list"), reshape_collapsed_data_to_matrix = targets::tar_target_raw(name = "collapsed_array", 
+        "var_name", "debug"), cue = targets::tar_cue("thorough"), 
+        pattern = NULL, iteration = "list"), reshape_collapsed_data_to_matrix = targets::tar_target_raw(name = "collapsed_array", 
         command = quote({
             {
                 roi_val <- collapsed[[roi_var]]
@@ -221,15 +234,16 @@ source("common.R", local = TRUE, chdir = TRUE)
                 item_table$ROI[item_table$ROI == "NA"] <- NA
                 mode(item_table$ROI) <- roi_val_mode
                 attr(collapsed_array, "item_table") <- item_table
-                print(names(attributes(collapsed_array)))
+                if (debug) {
+                  print(names(attributes(collapsed_array)))
+                }
             }
             return(collapsed_array)
-        }), deps = c("collapsed", "roi_var"), cue = targets::tar_cue("thorough"), 
+        }), deps = c("collapsed", "roi_var", "debug"), cue = targets::tar_cue("thorough"), 
         pattern = NULL, iteration = "list"), `z-score_baseline_collapsed_array` = targets::tar_target_raw(name = "baseline", 
         command = quote({
             {
                 library(rutabaga)
-                force(collapsed_array)
                 time_table <- attr(collapsed_array, "time_table")
                 baseline <- lapply(seq_along(condition_groups), 
                   function(ii) {
@@ -280,24 +294,28 @@ source("common.R", local = TRUE, chdir = TRUE)
                 }
                 indata_analysis <- indata_analysis[sel, , drop = FALSE]
                 attr(indata_analysis, "complete_cases") <- sel
+                item_table <- attr(collapsed_array, "item_table")
+                item_table <- item_table[sel, , drop = FALSE]
+                attr(indata_analysis, "item_table") <- item_table
             }
             return(indata_analysis)
-        }), deps = c("baseline", "analysis_time_window"), cue = targets::tar_cue("thorough"), 
-        pattern = NULL, iteration = "list"), slice_data_by_ploting_window = targets::tar_target_raw(name = "indata_plot", 
+        }), deps = c("baseline", "analysis_time_window", "collapsed_array"
+        ), cue = targets::tar_cue("thorough"), pattern = NULL, 
+        iteration = "list"), slice_data_by_ploting_window = targets::tar_target_raw(name = "indata_plot", 
         command = quote({
             {
                 library(rutabaga)
                 sel <- attr(indata_analysis, "complete_cases")
+                item_table <- attr(indata_analysis, "item_table")
                 indata_plot <- lapply(baseline, function(item) {
-                  cols <- item$time %within% plot_time_window
-                  list(time = item$time[cols], data = item$data[sel, 
-                    cols, drop = TRUE])
+                  list(time = item$time, data = item$data[sel, 
+                    , drop = TRUE])
                 })
+                attr(indata_plot, "item_table") <- item_table
             }
             return(indata_plot)
-        }), deps = c("indata_analysis", "baseline", "plot_time_window"
-        ), cue = targets::tar_cue("thorough"), pattern = NULL, 
-        iteration = "list"), measure_distance = targets::tar_target_raw(name = "dis", 
+        }), deps = c("indata_analysis", "baseline"), cue = targets::tar_cue("thorough"), 
+        pattern = NULL, iteration = "list"), measure_distance = targets::tar_target_raw(name = "dis", 
         command = quote({
             {
                 if (isTRUE(distance_method == "1 - correlation")) {
@@ -310,11 +328,39 @@ source("common.R", local = TRUE, chdir = TRUE)
             }
             return(dis)
         }), deps = c("distance_method", "indata_analysis"), cue = targets::tar_cue("thorough"), 
+        pattern = NULL, iteration = "list"), calculate_clustering_index = targets::tar_target_raw(name = "cluster_index", 
+        command = quote({
+            {
+                max_nclusters <- optim_clusters$max_nclusters
+                cvi_methods <- optim_clusters$methods
+                if (cluster_method == "K-Medois") {
+                  cluster_results <- sapply(seq_len(max_nclusters), 
+                    function(k) {
+                      tmp <- cluster::pam(x = dis, diss = TRUE, 
+                        k = k)
+                      tmp$clustering
+                    })
+                } else {
+                  cf <- stats::hclust(dis, method = hclust_method)
+                  cluster_results <- stats::cutree(cf, k = seq_len(max_nclusters))
+                }
+                cluster_index <- raveclusters::cluster_index(indata_analysis, 
+                  cluster_results, dist = dis, methods = cvi_methods)
+                best_nclusters <- raveclusters::best_nclusters(cluster_index)
+                attr(cluster_index, "best_nclusters") <- best_nclusters
+                attr(cluster_index, "clusters") <- cluster_results
+                if (debug) {
+                  print(best_nclusters)
+                }
+            }
+            return(cluster_index)
+        }), deps = c("optim_clusters", "cluster_method", "dis", 
+        "hclust_method", "indata_analysis", "debug"), cue = targets::tar_cue("thorough"), 
         pattern = NULL, iteration = "list"), apply_clustering = targets::tar_target_raw(name = "clusters", 
         command = quote({
             {
                 n_clust = min(input_nclusters, nrow(dis))
-                item_table <- attr(collapsed_array, "item_table")
+                item_table <- attr(indata_analysis, "item_table")
                 sel <- attr(indata_analysis, "complete_cases")
                 item_table <- item_table[sel, , drop = FALSE]
                 if (cluster_method == "H-Clust") {
@@ -327,37 +373,39 @@ source("common.R", local = TRUE, chdir = TRUE)
                   item_table$Cluster <- km
                 }
                 clusters <- item_table
-                print(dim(clusters))
-                print(head(clusters))
-            }
-            return(clusters)
-        }), deps = c("input_nclusters", "dis", "collapsed_array", 
-        "indata_analysis", "cluster_method", "hclust_method"), 
-        cue = targets::tar_cue("thorough"), pattern = NULL, iteration = "list"), 
-    get_mse = targets::tar_target_raw(name = "mse", command = quote({
-        {
-            library(dipsaus)
-            cluster_idx <- sort(unique(clusters$Cluster))
-            time <- sort(unique(unlist(lapply(indata_plot, "[[", 
-                "time"))))
-            mse <- array(NA_real_, c(length(time), 2, length(indata_plot), 
-                length(cluster_idx)))
-            for (ii in seq_along(cluster_idx)) {
-                ci <- cluster_idx[[ii]]
-                for (jj in seq_along(indata_plot)) {
-                  item <- indata_plot[[jj]]
-                  sel <- time %in% item$time
-                  group_mse <- apply(item$data[clusters$Cluster == 
-                    ci, , drop = FALSE], 2, dipsaus::mean_se, 
-                    na.rm = TRUE, se_na_as_zero = FALSE)
-                  mse[sel, , jj, ii] <- t(group_mse)
+                if (debug) {
+                  print(dim(clusters))
+                  print(head(clusters))
                 }
             }
-            dimnames(mse) <- list(Time = time, Stat = c("mean", 
-                "mse"), Group = seq_along(indata_plot), Cluster = cluster_idx)
-        }
-        return(mse)
-    }), deps = c("clusters", "indata_plot"), cue = targets::tar_cue("thorough"), 
+            return(clusters)
+        }), deps = c("input_nclusters", "dis", "indata_analysis", 
+        "cluster_method", "hclust_method", "debug"), cue = targets::tar_cue("thorough"), 
+        pattern = NULL, iteration = "list"), get_mse = targets::tar_target_raw(name = "mse", 
+        command = quote({
+            {
+                library(dipsaus)
+                cluster_idx <- sort(unique(clusters$Cluster))
+                time <- sort(unique(unlist(lapply(indata_plot, 
+                  "[[", "time"))))
+                mse <- array(NA_real_, c(length(time), 2, length(indata_plot), 
+                  length(cluster_idx)))
+                for (ii in seq_along(cluster_idx)) {
+                  ci <- cluster_idx[[ii]]
+                  for (jj in seq_along(indata_plot)) {
+                    item <- indata_plot[[jj]]
+                    sel <- time %in% item$time
+                    group_mse <- apply(item$data[clusters$Cluster == 
+                      ci, , drop = FALSE], 2, dipsaus::mean_se, 
+                      na.rm = TRUE, se_na_as_zero = FALSE)
+                    mse[sel, , jj, ii] <- t(group_mse)
+                  }
+                }
+                dimnames(mse) <- list(Time = time, Stat = c("mean", 
+                  "mse"), Group = seq_along(indata_plot), Cluster = cluster_idx)
+            }
+            return(mse)
+        }), deps = c("clusters", "indata_plot"), cue = targets::tar_cue("thorough"), 
         pattern = NULL, iteration = "list"), assign_color = targets::tar_target_raw(name = "cluster_table", 
         command = quote({
             {
@@ -399,4 +447,50 @@ source("common.R", local = TRUE, chdir = TRUE)
             }
             return(mds_result)
         }), deps = c("indata_analysis", "mds_distance"), cue = targets::tar_cue("thorough"), 
-        pattern = NULL, iteration = "list"))
+        pattern = NULL, iteration = "list"), generate_cluster_tree = targets::tar_target_raw(name = "imgbase64", 
+        command = quote({
+            {
+                plot_args <- list(use_baseline = use_baseline, 
+                  power_unit = power_unit, analysis_time_window = analysis_time_window, 
+                  condition_groups = condition_groups, indata_plot = indata_plot)
+                cluster_mat <- attr(cluster_index, "clusters")
+                item_table <- attr(indata_plot, "item_table")
+                imgbase64 <- dipsaus::fastqueue2()
+                tmpfile <- tempfile(pattern = "ravecluster_visnet_", 
+                  tmpdir = tempdir(check = TRUE), fileext = ".png")
+                invisible(lapply(seq_len(ncol(cluster_mat)), 
+                  function(ii) {
+                    cluster <- cluster_mat[, ii]
+                    item_table$Cluster <- cluster
+                    mse <- raveclusters::cluster_mse(indata_plot = indata_plot, 
+                      cluster = cluster)
+                    plot_args$cluster_table <- item_table
+                    plot_args$mse <- mse
+                    raveclusters::cluster_visualization(plot_args, 
+                      decorators = NULL, cex = 2, one_plot = FALSE, 
+                      before_plot = function() {
+                        png(filename = tmpfile, width = 640, 
+                          height = 480)
+                      }, after_plot = function() {
+                        grDevices::dev.off()
+                        imgbase64$add(base64enc::dataURI(file = tmpfile))
+                        unlink(tmpfile)
+                      })
+                  }))
+            }
+            return(imgbase64)
+        }), deps = c("use_baseline", "power_unit", "analysis_time_window", 
+        "condition_groups", "indata_plot", "cluster_index"), 
+        cue = targets::tar_cue("thorough"), pattern = NULL, iteration = "list"), 
+    plot_cluster_tree = targets::tar_target_raw(name = "cluster_tree_plot", 
+        command = quote({
+            {
+                cluster_tree_plot <- raveclusters::cluster_tree(list(cluster_index = cluster_index, 
+                  imgbase64 = imgbase64))
+                if (debug) {
+                  print(cluster_tree_plot)
+                }
+            }
+            return(cluster_tree_plot)
+        }), deps = c("cluster_index", "imgbase64", "debug"), 
+        cue = targets::tar_cue("thorough"), pattern = NULL, iteration = "list"))

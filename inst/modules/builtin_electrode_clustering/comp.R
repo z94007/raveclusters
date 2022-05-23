@@ -162,9 +162,9 @@ define_input(
 )
 
 
-define_input(
-  definition = customizedUI(inputId = "minkowski_p_ui")#TODO
-)
+# define_input(
+#   definition = customizedUI(inputId = "minkowski_p_ui")#TODO
+# )
 
 define_input(
   definition = selectInput(inputId = 'distance_method', label = 'Clustering Distance Measurement',
@@ -265,7 +265,8 @@ input_layout = list(
   #[#99ccff][-]
   'Trial Selector' = list(
     # 'text_electrode',
-    'input_groups'
+    'input_groups',
+    'do_run'
   ),
   'Analysis Settings' = list(
     # 'trial_selected',
@@ -282,8 +283,7 @@ input_layout = list(
     'mds_distance_method',
     c('check_scale',
     'op_run'),
-    'baseline_time',
-    'do_run'
+    'baseline_time'
   ),
   
   'Export Settings' = list(

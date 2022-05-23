@@ -65,7 +65,7 @@ cluster_mds_plot <- function(results) {
     
   }
   
-  ravebuiltins:::rave_title(
+  rave_title(
     sprintf(
       '%d subj, %d elec, %d evt, %d obs',
       length(unique(cluster_table$Subject)),

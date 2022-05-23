@@ -30,6 +30,11 @@ output$visnet <- visNetwork::renderVisNetwork({
 shiny::bindEvent(
   shiny::observe({
     
+    if(!is.list(local_data$source_data) || 
+       !length(local_data$source_data)) {
+      return()
+    }
+    
     try({
       fast_results <- raveclusters::ravecluster(
         names = c("settings", "mds_result", "collapsed_array", 
@@ -49,7 +54,11 @@ shiny::bindEvent(
         analysis_time_window = input$time_window,
         power_unit = input$power_unit,
         analysis_event = input$epoch_event,
-        mds_distance = input$mds_distance_method
+        mds_distance = input$mds_distance_method,
+        optim_clusters = list(
+          max_nclusters = 8,
+          methods = "default"
+        )
       )
       
       local_data$fast_results <- fast_results
@@ -61,5 +70,6 @@ shiny::bindEvent(
   input$power_unit,
   input$epoch_event,
   input$mds_distance_method,
-  ignoreNULL = TRUE, ignoreInit = TRUE
+  local_data$source_data,
+  ignoreNULL = TRUE, ignoreInit = FALSE
 )

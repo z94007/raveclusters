@@ -38,12 +38,14 @@ roi_options:
 analysis_event: Trial_Onset
 input_nclusters: 3.0
 cluster_method: H-Clust
-plot_time_window:
-- 0.0
-- 1.5
 use_baseline: yes
 power_unit: z_score_Amplitude
 analysis_time_window:
 - 0.0
 - 0.6
 color_scheme: Dark2
+optim_clusters:
+  max_nclusters: 8
+  methods: default
+debug: no
+  

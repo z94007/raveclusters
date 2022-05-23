@@ -13,11 +13,15 @@ ravecluster_target_names <- function(){
 }
 
 #' @export
-ravecluster <- function(names, ..., 
-                        .scheduler = "none", .type = "smart",
-                        .workdir = tempdir(check = TRUE),
-                        .verbose_level = c("verbose", "silent", "summary", "timestamp"),
-                        .upgrade = FALSE, .values = TRUE) {
+ravecluster <- function(
+  names, ..., 
+  .scheduler = "none", .type = "smart",
+  .workdir = tempdir(check = TRUE),
+  .verbose_level = c("verbose", "silent", "summary", "timestamp"),
+  .upgrade = FALSE, .values = TRUE,
+  .pipeline_args = list(),
+  .async = FALSE
+) {
   
   if(!dir.exists(.workdir)) {
     stop("Invalid working directory: the path does not exists.")
@@ -65,7 +69,16 @@ ravecluster <- function(names, ...,
   
   values <- dipsaus::fastmap2()
   
-  raveio::pipeline_run_bare(pipe_dir = pipeline_path, scheduler = .scheduler, type = .type, envir = new.env(parent = globalenv()), names = names, reporter = .verbose_level)
+  args <- c(list(
+    pipe_dir = pipeline_path, scheduler = .scheduler, type = .type, envir = new.env(parent = globalenv()), names = names, reporter = .verbose_level
+  ), as.list(.pipeline_args))
+  
+  if(.async) {
+    args$async <- TRUE
+    return(do.call(raveio::pipeline_run, args))
+  } else {
+    return(do.call(raveio::pipeline_run_bare, args))
+  }
   
 }
 

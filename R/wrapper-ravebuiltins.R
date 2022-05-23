@@ -2,20 +2,20 @@
 
 remove_hemisphere_labels <- function(levels) {
   
-  if(dipsaus::package_installed("ravebuiltins")) {
-    ravebuiltins::remove_hemisphere_labels(levels)
-  } else {
+  # if(dipsaus::package_installed("ravebuiltins")) {
+  #   ravebuiltins::remove_hemisphere_labels(levels)
+  # } else {
     stringr::str_replace_all(levels, c(`L ` = "", `R ` = ""))
-  }
+  # }
   
 }
 
 remove_gyrus_sulcus_labels <- function(levels) {
-  if(dipsaus::package_installed("ravebuiltins")) {
-    ravebuiltins::remove_gyrus_sulcus_labels(levels)
-  } else {
+  # if(dipsaus::package_installed("ravebuiltins")) {
+  #   ravebuiltins::remove_gyrus_sulcus_labels(levels)
+  # } else {
     stringr::str_replace_all(levels, c(`GS ` = "", `G ` = "", `S ` = ""))
-  }
+  # }
 }
 
 
@@ -60,4 +60,31 @@ get_cex_for_multifigure <- function ()
     }
   }
   return(cex_multiplier)
+}
+
+plotting_to_file <- function () {
+  i = get0(".Devices", envir = baseenv(), ifnotfound = list("-1"), 
+           inherits = FALSE)
+  if ("-1" == i[[1]]) {
+    return(FALSE)
+  }
+  if (length(i) < dev.cur()) {
+    return(FALSE)
+  }
+  i = i[[dev.cur()]]
+  return(isTRUE("dipsaus_dev_name" %in% names(attributes(i)) || 
+                  i %in% c("pdf", "png", "jpeg")))
+}
+
+rave_title <- function (main, cex = 1, col, font = 1) {
+  if(missing(col) || is.null(col)) {
+    col <- par("fg")
+  }
+  if (plotting_to_file()) {
+    cex <- 1
+  } else {
+    cex <- shiny_cex.main * cex
+  }
+  title(main = list(main, cex = cex * get_cex_for_multifigure(), 
+                    col = col, font = font))
 }

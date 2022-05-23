@@ -1,5 +1,5 @@
 cluster_idx_plot <- function(
-  x, dis, clustfun, method = c("silhouette", "wss"),
+  x, dis, clustfun, method = c("silhouette", "wss", "gap_stat"),
   distance_method, col = "dodgerblue3", cv_fold = 5,
   n_highlights = 3, max_clusters = 8
 ) {
@@ -16,12 +16,12 @@ cluster_idx_plot <- function(
     }
   }
   dis <- as.matrix(dis)
-  sa <- sample(seq_len(nrow(x)))
+  sa <- sample(seq_len(nrow(indata_analysis)))
   cv_size <- ceiling(length(sa) / cv_fold)
   cv_idx <- matrix(NA_integer_, cv_fold, cv_size)
   cv_idx[seq_along(sa)] <- sa
   
-  if(cv_fold > 1){
+  if(method != "gap_stat" && cv_fold > 1){
     cv_y <- lapply(seq_len(cv_fold), function(ii) {
       idx <- cv_idx[ii, ]
       idx <- idx[!is.na(idx)]
@@ -48,7 +48,17 @@ cluster_idx_plot <- function(
       method = method, 
       diss = dis,
       k.max = max_clusters )
-    cv_mse_y <- rbind(cxi$data$y, 0)
+    if(method == "gap_stat") {
+      xlen <- seq_len(nrow(cxi$data))
+      cv_mse_y <- rbind(
+        (cxi$data$ymax + cxi$data$ymin) / 2,
+        (cxi$data$ymax - cxi$data$ymin) / 2
+      )
+    } else {
+      xlen <- seq_along(cxi$data$y)
+      cv_mse_y <- rbind(cxi$data$y, 0)
+    }
+    
   }
   
   
@@ -58,15 +68,16 @@ cluster_idx_plot <- function(
     cv_mse_y[1, ] - cv_mse_y[2,]
   )
   
+  xlab <- "Number of clusters k"
   switch (
     method,
     silhouette = {
-      xlab <- "Number of clusters k"
-      ylab <- "Average Silhouette with"
+      ylab <- "Average Silhouette width"
     },
     wss = {
-      xlab <- "Number of clusters k"
-      ylab <- "Total Within Sum of Square"
+      ylab <- "Total within sum of square"
+    }, {
+      ylab <- "Gap statistics (k)"
     }
   )
   
@@ -76,7 +87,19 @@ cluster_idx_plot <- function(
     main = "Optimal number of clusters"
   )
   rutabaga::ruta_axis(side = 1, xlen)
-  rutabaga::ruta_axis(side = 2, pretty(yrange))
+  if(method == "wss") {
+    pyl <- pretty(yrange)
+    fyl <- floor(log10(pyl))
+    labels <- sprintf("%.0fE%.0f", pyl / 10^fyl, fyl)
+    if(pyl[[1]] <= 0) {
+      labels[1] <- "0"
+    }
+    rutabaga::ruta_axis(side = 2, at = pyl, 
+                        labels = labels)
+  } else {
+    rutabaga::ruta_axis(side = 2, pretty(yrange))
+  }
+  
   if(cv_fold > 1) {
     rutabaga::ebars(
       x = xlen,
@@ -99,7 +122,7 @@ cluster_idx_plot <- function(
     idx <- order(cv_mse_y[1, ], decreasing = TRUE)[seq_len(n_highlights)]
     
     points(idx, cv_mse_y[1, idx], col = "red", pch = 19)
-    legend('topright', 
+    legend('bottomright', 
            "Suggested # clusters",
            bty='n', text.font = 2, col = 'red', pch = 19)
     

@@ -8,6 +8,9 @@ editor_options:
 ---
 
 ```{r setup, include = FALSE}
+# rebuild package
+devtools::load_all(path = rstudioapi::getActiveProject())
+
 # This code block sets up the engine environment
 # Please do not remove me
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
@@ -24,10 +27,8 @@ if(FALSE){
     settings <- raveio::load_yaml(f)
     list2env(as.list(settings), envir = globalenv())
   })
-#   
-  # settings$hclust_method <- "ward.D2"
-  # raveio::save_yaml(settings, 'settings.yaml')
 }
+debug <- TRUE
 ```
 
 Let's start by printing the summary of this project
@@ -70,7 +71,9 @@ source_data <- raveclusters::import_configurations(
   search_paths = search_paths, 
   file_names = source_files)
 
-print(names(source_data))
+if(debug) {
+  print(names(source_data))
+}
 source_data$data
 ```
 
@@ -80,7 +83,12 @@ Parse the ROI selector and generate columns to filter `source_data$data`
 # subset with only the selected ROI variable
 roi_list <- c("VAR_IS_ROI_Hemisphere", "VAR_IS_ROI_freesurferlabel", 
               "VAR_IS_ROI_Group", "VAR_IS_ROI_Block")
-roi_var<- paste0('VAR_IS_ROI_', roi_options$variable)
+if(length(roi_options$variable)) {
+  roi_var <- paste0('VAR_IS_ROI_', roi_options$variable)
+} else {
+  roi_var <- NULL
+}
+
 
 ```
 
@@ -103,16 +111,19 @@ raw_table = raw_table[, !names(raw_table) %in% excluded_roi, with = FALSE]
 use_regex <- ( roi_options$roi_ignore_gyrus_sulcus || roi_options$roi_ignore_hemisphere )
 
 filter_by_roi <- roi_options$value
-na_rm <- TRUE
-if("N/A" %in% filter_by_roi) {
-  filter_by_roi <- filter_by_roi[!filter_by_roi %in% "N/A"]
-  na_rm <- FALSE
+if(length(roi_var) && length(filter_by_roi)) {
+  na_rm <- TRUE
+  if("N/A" %in% filter_by_roi) {
+    filter_by_roi <- filter_by_roi[!filter_by_roi %in% "N/A"]
+    na_rm <- FALSE
+  }
+  
+  raw_table <- raveclusters::table_apply_roi(
+    table = raw_table, roi_column = roi_var,
+    roi = filter_by_roi, use_regex = use_regex,
+    na_rm = na_rm)
 }
 
-raw_table <- raveclusters::table_apply_roi(
-  table = raw_table, roi_column = roi_var,
-  roi = filter_by_roi, use_regex = use_regex,
-  na_rm = na_rm)
 ```
 
 
@@ -208,7 +219,10 @@ collapsed = lapply(seq_along(condition_groups), function( ii ){
 
 # rbind
 collapsed <- data.table::rbindlist(collapsed)
-print(collapsed)
+
+if(debug) {
+  print(collapsed)
+}
 ```
 
 Reshape and "cast" the `collapsed` table to a matrix to apply the clustering algorithms, resulting in `collapsed_array`. `collapsed_array` is a matrix:
@@ -266,7 +280,9 @@ item_table$ROI[item_table$ROI == "NA"] <- NA
 mode(item_table$ROI) <- roi_val_mode
 attr(collapsed_array, "item_table") <- item_table
 
-print(names(attributes(collapsed_array)))
+if(debug) {
+  print(names(attributes(collapsed_array)))
+}
 ```
 
 We z-score baseline based on `collapsed_array`:
@@ -278,7 +294,6 @@ The returned `baseline` variable is a list of sub-matrices, each of which repres
 
 ```{rave z-score_baseline_collapsed_array, export = "baseline"}
 library(rutabaga)
-force(collapsed_array)
 time_table <- attr(collapsed_array, "time_table")
 
 baseline <- lapply(seq_along(condition_groups), function( ii ){
@@ -346,24 +361,33 @@ if(!sum(sel)) {
 }
 indata_analysis <- indata_analysis[sel,,drop = FALSE]
 attr(indata_analysis, "complete_cases") <- sel
+
+item_table <- attr(collapsed_array, "item_table")
+item_table <- item_table[sel, , drop = FALSE]
+attr(indata_analysis, "item_table") <- item_table
 ```
 
-`indata_plot` is similar to `indata_analysis`, but sliced based on plotting time window `plot_time_window`.
+`indata_plot` is similar to `indata_analysis`, but no slice in time.
 
 ```{rave slice_data_by_ploting_window, export="indata_plot"}
 library(rutabaga)
 
 sel <- attr(indata_analysis, "complete_cases")
+item_table <- attr(indata_analysis, "item_table")
 
 # Filter by analysis window first
 indata_plot <- lapply(baseline, function(item){
-  # item <- baseline[[1]]
-  cols <- item$time %within% plot_time_window
+  # cols <- item$time %within% plot_time_window
+  # list(
+  #   time = item$time[cols],
+  #   data = item$data[sel, cols, drop = TRUE]
+  # )
   list(
-    time = item$time[cols],
-    data = item$data[sel, cols, drop = TRUE]
+    time = item$time,
+    data = item$data[sel, , drop = TRUE]
   )
 })
+attr(indata_plot, "item_table") <- item_table
 ```
 
 Calculate the distance matrix based on `indata_analysis`
@@ -379,13 +403,43 @@ if(isTRUE(distance_method == '1 - correlation')){
 }
 ```
 
+Calculate cluster index
+
+```{rave calculate_clustering_index, export = "cluster_index"}
+# indata_analysis <- results$indata_analysis
+# dis <- results$dis
+# hclust_method <- 'ward.D2'
+# 
+max_nclusters <- optim_clusters$max_nclusters
+cvi_methods <- optim_clusters$methods
+
+if(cluster_method == "K-Medois") {
+  cluster_results <- sapply(seq_len(max_nclusters), function(k){
+    tmp <- cluster::pam(x = dis, diss = TRUE, k = k)
+    tmp$clustering
+  })
+} else {
+  cf <- stats::hclust(dis, method = hclust_method)
+  cluster_results <- stats::cutree(cf, k = seq_len(max_nclusters))
+}
+
+cluster_index <- raveclusters::cluster_index(
+  indata_analysis, cluster_results, dist = dis, methods = cvi_methods)
+best_nclusters <- raveclusters::best_nclusters(cluster_index)
+attr(cluster_index, "best_nclusters") <- best_nclusters
+attr(cluster_index, "clusters") <- cluster_results
+if(debug) {
+  print(best_nclusters)
+}
+```
+
 Perform clustering algorithms. Variable `clusters` has four columns:
 * `Subject`, `Electrode`, `Event`, `Cluster`
 
 ```{rave apply_clustering, language = "R", export = 'clusters'}
 n_clust = min(input_nclusters, nrow(dis))
 
-item_table <- attr(collapsed_array, "item_table")
+item_table <- attr(indata_analysis, "item_table")
 sel <- attr(indata_analysis, "complete_cases")
 item_table <- item_table[sel, , drop = FALSE]
 
@@ -403,8 +457,11 @@ if (cluster_method == "H-Clust"){
 
 # rename
 clusters <- item_table
-print(dim(clusters))
-print(head(clusters))
+
+if(debug) {
+  print(dim(clusters))
+  print(head(clusters))
+}
 ```
 
 
@@ -510,6 +567,71 @@ if(ncol(indata_analysis) == 2) {
 mds_result <- as.data.frame(mds_result)
 names(mds_result) <- c("x", "y")
 
+```
+
+Prepare the clustering plots for `visNetwork` to show the clustering tree
+
+```{rave generate_cluster_tree, export = "imgbase64"}
+# img <- file.path(image_dir, sprintf('%s.png', codes))
+#   
+#   image <- sapply(img, function(x){
+#     base64enc::dataURI(file = x)
+#   })
+plot_args <- list(
+  use_baseline = use_baseline,
+  power_unit = power_unit,
+  analysis_time_window = analysis_time_window,
+  condition_groups = condition_groups,
+  indata_plot = indata_plot
+)
+
+cluster_mat <- attr(cluster_index, "clusters")
+item_table <- attr(indata_plot, "item_table")
+
+imgbase64 <- dipsaus::fastqueue2()
+
+# create png
+tmpfile <- tempfile(pattern = "ravecluster_visnet_", 
+                    tmpdir = tempdir(check = TRUE),
+                    fileext = ".png")
+
+invisible(
+  lapply(seq_len(ncol(cluster_mat)), function(ii) {
+    cluster <- cluster_mat[, ii]
+    item_table$Cluster <- cluster
+    mse <- raveclusters::cluster_mse(indata_plot = indata_plot, 
+                                      cluster = cluster)
+    plot_args$cluster_table <- item_table
+    plot_args$mse <- mse
+    raveclusters::cluster_visualization(
+      plot_args, decorators = NULL, cex = 2,
+      one_plot = FALSE,
+      before_plot = function(){
+        png(filename = tmpfile, width = 640, height = 480)
+      },
+      after_plot = function(){
+        grDevices::dev.off()
+        imgbase64$add(
+          base64enc::dataURI(file = tmpfile)
+        )
+        unlink(tmpfile)
+      }
+    )
+  })
+
+)
+
+
+```
+
+```{rave plot_cluster_tree, export = "cluster_tree_plot"}
+cluster_tree_plot <- raveclusters::cluster_tree(list(
+  cluster_index = cluster_index,
+  imgbase64 = imgbase64
+))
+if(debug) {
+  print(cluster_tree_plot)
+}
 ```
 
 ## Pipeline Visualization
