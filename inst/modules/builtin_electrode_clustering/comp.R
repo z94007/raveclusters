@@ -86,7 +86,7 @@ define_input(
 )
 
 define_input(
-  definition = sliderInput(inputId = 'baseline_time', label = 'Baseline time for z-score', 
+  definition = sliderInput(inputId = 'baseline_time', label = 'Baseline window for z-score', 
                            min = -1, 
                            max= 3,
                            value = c(-1,0),
@@ -124,7 +124,7 @@ define_input_condition_groups('input_groups', label = 'Condition Group')
 
 define_input(
   definition = numericInput(inputId = 'input_nclusters', label = 'Number of Clusters', 
-                            value = 2, min = 1, max = 12, step = 1)
+                            value = 2, min = 1, max = 8, step = 1)
 )
 
 define_input(
@@ -272,18 +272,24 @@ input_layout = list(
     # 'trial_selected',
     "power_unit",
     "epoch_event",
-    c('model_dependent'),#should be deleted?
-    c('model_roi_variable','filter_by_roi'),
-    c('roi_ignore_hemisphere', 'roi_ignore_gyrus_sulcus'),
+    
+    'baseline_time',
+    'check_scale',
     'time_window',
     'plot_time_window',
+    c('model_roi_variable','filter_by_roi'),
+    c('roi_ignore_hemisphere', 'roi_ignore_gyrus_sulcus')
+
+   
+
+    
+  ),
+  'Clustering Settings' = list(
     'input_method',
     'hclust_method',
-    c('input_nclusters','distance_method' ),
+    'distance_method',
     'mds_distance_method',
-    c('check_scale',
-    'op_run'),
-    'baseline_time'
+    'input_nclusters'
   ),
   
   'Export Settings' = list(
