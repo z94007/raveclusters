@@ -132,8 +132,13 @@ cluster_index <- function(
   if("slht" %in% native_mathods) {
     get_dist()
     re$silhouette <- apply(cluster, 2, function(idx) {
+      print(idx)
       if(length(unique(idx)) == 1) { return(NA) }
-      return(mean(cluster::silhouette(idx, env$dist)[, 3]))
+      silhouette_widths <- cluster::silhouette(idx, env$dist)
+      if(is.matrix(silhouette_widths) && ncol(silhouette_widths) == 3) {
+        return(mean(cluster::silhouette(idx, env$dist)[, 3]))
+      }
+      return(NA)
     })
   }
   

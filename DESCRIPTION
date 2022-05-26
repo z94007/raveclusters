@@ -13,7 +13,8 @@ URL: https://z94007.github.io/raveclusters, https://github.com/z94007/ravecluste
 BugReports: https://github.com/z94007/raveclusters/issues
 Authors@R: 
     c(
-    person(given = "Xiang", family = "Zhang", role = c("cre", "aut"), email = "your_email@mail.edu")
+    person(given = "Xiang", family = "Zhang", role = c("cre", "aut"), email = "xiang.zhang@pennmedicine.upenn.edu"),
+    person(given = "Zhengjia", family = "Wang", role = c("aut"), email = "zhengjia.wang@pennmedicine.upenn.edu")
     )
 Imports:
     shiny (>= 1.2.0),
@@ -30,7 +31,8 @@ Imports:
     dendextend (>= 1.15.1),
     factoextra (>= 1.0.7),
     dtw (>= 1.22.3),
-    visNetwork (>= 2.1.0)
+    visNetwork (>= 2.1.0),
+    clusterCrit (>= 1.2.8)
 Suggests:
     devtools,
     rstudioapi (>= 0.9.0),
