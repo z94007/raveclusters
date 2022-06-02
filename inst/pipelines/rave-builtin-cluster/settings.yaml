@@ -1,42 +1,51 @@
 new_input: new_default_value
 input_groups:
-  '1':
-    group_name: All Conditions
-    group_conditions:
-    - rain_a_clear_v_clear
-    - rain_a_clear_v_noisy
-    - rain_a_noisy_v_clear
-    - rock_a_clear_v_clear
-    - rock_a_clear_v_noisy
-    - rain_a_noisy_v_noisy
-    - rock_a_noisy_v_clear
-    - rock_a_noisy_v_noisy
-source_files: YAJ_demo-20211203-112740.fst
+- group_name: A
+  group_conditions:
+  - last_a
+  - know_a
+  - meat_a
+  - drive_a
+- group_name: V
+  group_conditions:
+  - last_v
+  - know_v
+  - meat_v
+  - drive_v
+- group_name: AV
+  group_conditions:
+  - last_av
+  - know_av
+  - meat_av
+  - drive_av
+source_files: 
+  - YAK_demo_export-20210525-082018.fst
+  - junk-YCK_pow_by_cond-20211214-141952.fst
 baseline_time:
-- -1
-- 0
-project_name: Reliability
+- -1.0
+- 0.0
+project_name: demo
 distance_method: manhattan
 hclust_method: ward.D2
-input_nclusters: 2
+mds_distance: manhattan
 roi_options:
   variable: Hemisphere
-  values: right
+  value: 
+    - right
+    - left
   roi_ignore_gyrus_sulcus: no
   roi_ignore_hemisphere: no
 analysis_event: Trial_Onset
-power_unit: Pct_Change_Amplitude
-optim_clusters:
-  max_nclusters: 8.0
-  methods: default
-analysis_time_window:
-- -1
-- 3
-debug: no
+input_nclusters: 3.0
 cluster_method: H-Clust
-plot_time_window:
-- -1
-- 3
-color_scheme: Dark2
 use_baseline: yes
-mds_distance: manhattan
+power_unit: z_score_Amplitude
+analysis_time_window:
+- 0.0
+- 0.6
+color_scheme: Dark2
+optim_clusters:
+  max_nclusters: 8
+  methods: default
+debug: no
+  

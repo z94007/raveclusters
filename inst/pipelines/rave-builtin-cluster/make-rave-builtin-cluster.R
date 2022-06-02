@@ -467,7 +467,11 @@ source("common.R", local = TRUE, chdir = TRUE)
                     plot_args$cluster_table <- item_table
                     plot_args$mse <- mse
                     raveclusters::cluster_visualization(plot_args, 
-                      decorators = NULL, cex = 2, one_plot = FALSE, 
+                      cex = 2, one_plot = FALSE, 
+                      style_title = "simplified+default", 
+                      style_analysis = "none", 
+                      style_baseline = "none", 
+                      style_axis = "box", 
                       before_plot = function() {
                         png(filename = tmpfile, width = 640, 
                           height = 480)
