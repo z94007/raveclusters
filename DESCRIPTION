@@ -8,7 +8,7 @@ Description: More about what it does (maybe more than one line)
 License: GPL-3
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 7.1.2
+RoxygenNote: 7.2.0
 URL: https://z94007.github.io/raveclusters, https://github.com/z94007/raveclusters
 BugReports: https://github.com/z94007/raveclusters/issues
 Authors@R: 

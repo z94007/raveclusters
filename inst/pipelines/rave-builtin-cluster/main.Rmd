@@ -71,6 +71,13 @@ source_data <- raveclusters::import_configurations(
   search_paths = search_paths, 
   file_names = source_files)
 
+if(!length(source_data)) {
+  stop("`raveclusters`: All requested files are missing from the search path:\n",
+       paste0("    ", source_files, collapse = "\n"))
+}
+
+if(!is.list(source_data))
+
 if(debug) {
   print(names(source_data))
 }

@@ -4,7 +4,8 @@ cluster_on_brain <- function(
   controllers = list(
     `Show Time` = FALSE,
     `Show Panels` = FALSE
-  )) {
+  ),
+  surface_types = c("pial", "smoothwm")) {
   # results <- ravecluster(
   #   names = c(
   #     "project", "collapsed",
@@ -44,7 +45,7 @@ cluster_on_brain <- function(
   # get subjects & brain
   subjects <- unique(cluster_table$Subject)
   brain <- dipsaus::drop_nulls(lapply(subjects, function(sub){
-    raveio::rave_brain(sprintf('%s/%s', project_name, sub))
+    raveio::rave_brain(sprintf('%s/%s', project_name, sub), surfaces = surface_types)
   }))
   
   # check if the brain length is 0 or 1
@@ -52,7 +53,8 @@ cluster_on_brain <- function(
     return(invisible("No RAVE-brain is found for any of these subjects"))
   }
   if(force_template || length(subjects) > 1) {
-    brain <- threeBrain::merge_brain(.list = brain)
+    brain <- threeBrain::merge_brain(.list = brain, 
+                                     template_surface_types = surface_types)
   } else {
     brain <- brain[[1]]
   }
