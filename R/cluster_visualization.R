@@ -14,7 +14,8 @@ cluster_visualization <- function(
   one_plot = TRUE,
   which = 0,
   plot_range = NULL, yrange = NULL,
-  before_plot = NULL, after_plot = NULL){
+  before_plot = NULL, after_plot = NULL,
+  main = NULL){
   
   
   style_title <- match.arg(style_title)
@@ -175,11 +176,13 @@ cluster_visualization <- function(
              text.font = 1, adj = 1, cex = cex_legend)
     }
     
+    legend_trace <- NULL
     if(style_legend == "default") {
       # Add legends for each conditions
-      legend(x = xrange[[1]],y = max(yaxi), group_names, bty='n', 
+      legend_trace <- legend("topleft", legend = group_names, bty='n', 
              text.font = 1, text.col = cols, cex = cex_legend, adj = c(0, 1))
     }
+    
     
     
     # Add title
@@ -195,13 +198,15 @@ cluster_visualization <- function(
       #   col = ccol,
       #   cex = cex_main
       # )
-      if(style_title %in% c("simplified+color", "simplified+default")) {
-        main <- sprintf('n=%s', cluster_idx[ii],
-                        sum(results$cluster_table$Cluster == cluster_idx[ii]))
-      } else {
-        main <- sprintf('Cluster%s (n=%s)', cluster_idx[ii],
-                         sum(results$cluster_table$Cluster == cluster_idx[ii]))
+      if(is.null(main)) {
+        if(style_title %in% c("simplified+color", "simplified+default")) {
+          main <- sprintf('n=%s', sum(results$cluster_table$Cluster == cluster_idx[ii]))
+        } else {
+          main <- sprintf('Cluster%s (n=%s)', cluster_idx[ii],
+                          sum(results$cluster_table$Cluster == cluster_idx[ii]))
+        }
       }
+      
       graphics::title(main = list(main, col = ccol, font = 1,
                                   cex = cex_main))
     }

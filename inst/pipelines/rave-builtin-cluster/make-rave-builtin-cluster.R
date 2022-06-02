@@ -94,7 +94,11 @@ source("common.R", local = TRUE, chdir = TRUE)
                   "exports")
                 source_data <- raveclusters::import_configurations(search_paths = search_paths, 
                   file_names = source_files)
-                if (debug) {
+                if (!length(source_data)) {
+                  stop("`raveclusters`: All requested files are missing from the search path:\n", 
+                    paste0("    ", source_files, collapse = "\n"))
+                }
+                if (!is.list(source_data)) if (debug) {
                   print(names(source_data))
                 }
                 source_data$data
@@ -467,12 +471,9 @@ source("common.R", local = TRUE, chdir = TRUE)
                     plot_args$cluster_table <- item_table
                     plot_args$mse <- mse
                     raveclusters::cluster_visualization(plot_args, 
-                      cex = 2, one_plot = FALSE, 
-                      style_title = "simplified+default", 
-                      style_analysis = "none", 
-                      style_baseline = "none", 
-                      style_axis = "box", 
-                      before_plot = function() {
+                      cex = 2, style_title = "simplified+default", 
+                      style_analysis = "none", style_baseline = "none", 
+                      style_axis = "box", one_plot = FALSE, before_plot = function() {
                         png(filename = tmpfile, width = 640, 
                           height = 480)
                       }, after_plot = function() {
