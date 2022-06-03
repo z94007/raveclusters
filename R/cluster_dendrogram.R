@@ -31,8 +31,7 @@ cluster_dendrogram <- function(results, cex = 1, main = "Dendrogram",
                                margin_right = 2.1, 
                                cex_leaf = 0.7, pal = "BlueGrayRed") {
   
-  # list2env(list(cex = 1, main = "Dendrogram", 
-  #               cex_leaf = 0.7), envir=.GlobalEnv)
+  # list2env(list(cex = 1, main = "Dendrogram", margin_right = 2.1, cex_leaf = 0.7, pal = "BlueGrayRed"), envir=.GlobalEnv)
   
   if(!identical(results$cluster_method, 'H-Clust')) {
     stop("Cluster dendrogram is only available for hierarchical clustering")
@@ -112,14 +111,14 @@ cluster_dendrogram <- function(results, cex = 1, main = "Dendrogram",
   class(dend) <- 'dendrogram'
   
   xlim <- attr(dend, "height")
-  ylim <- n + 0.8
+  ylim <- n + 1
   
   #set lay out
-  layout(matrix(c(2, 1), ncol = 2), widths = c(3/4, 1/4))
+  layout(matrix(c(3,4,1,2), ncol = 2), widths = c(3/4, 1/4), heights = c(lcm(1.3), 1))
   
   
-  par(mar = c(0, 1, 1, 1))
-  plot_clean(xlim = c(0, 1), ylim = c(0, ylim))
+  par(mar = c(0, 1, 1.5, 1))
+  # plot_clean(xlim = c(0, 1), ylim = c(0, ylim))
   
   # combine mse
   indata_analysis <- results$indata_analysis
@@ -127,27 +126,31 @@ cluster_dendrogram <- function(results, cex = 1, main = "Dendrogram",
   zlim <- quantile(abs(z), 0.99, na.rm = TRUE)
   z[z > zlim] <- zlim
   z[z < -zlim] <- -zlim
-  image( z, zlim = c(-zlim, zlim),
-         y = seq_len(n),
-         col= pal,
-         yaxt = 'n',bty = 'n', xaxt= 'n', add = TRUE)
   
   zlen <- seq(-zlim, zlim, length.out = length(pal))
-  z <- matrix(zlen, ncol = 1)
-  image(z = cbind(z, z), y = c(ylim + 0.2, ylim + 0.5), col = pal,
-        yaxt = 'n', bty = 'n', xaxt = 'n', add = TRUE)
+  zlegend <- matrix(zlen, ncol = 1)
+  image(z = zlegend, col = pal,
+        yaxt = 'n', bty = 'n', xaxt = 'n', xlim = c(0, 1))
   zlen_txt <- sprintf("%.1f", c(-zlim, zlim))
   axis(3, c(0, 0.5, 1), labels = c(zlen_txt[1], "0", zlen_txt[2]), 
        tcl = -0.2, mgp = c(3, 0.25, 0), cex.axis = 0.6)
   
+  par(mar = c(0, 1, 0.1, 1))
+  plot_clean(c(0, 1), c(0, ylim))
+  image( z, zlim = c(-zlim, zlim),
+         y = seq(1.5, n-0.5, length.out = n),
+         col= pal, ylim = c(0, ylim), add = TRUE,
+         yaxt = 'n',bty = 'n', xaxt= 'n')
   
   
-  par(cex = cex, mar = c(0,1, 1, margin_right), xpd = TRUE)
+  par(cex = cex, mar = c(0, 1, 1.5, 0))
+  plot_clean(c(0,1), c(0,1), main = main)
   
+  par(mar = c(0, 1, 0.1, margin_right))
   # plot the horizontal dendrogram
   # remove the y axis and labels
   plot(dend,las = 1,horiz = TRUE, yaxt='n', 
-       ylim = c(0, ylim), main = main)
+       ylim = c(0, ylim))
   
   #add clustering cutting line
   MidPoint = (hclust$height[n - k] + hclust$height[n - k + 1]) / 2
@@ -165,9 +168,9 @@ cluster_dendrogram <- function(results, cex = 1, main = "Dendrogram",
     graph_height <- legend_params$rect$h
   }
   graph_width <- graph_height * 2.4 / ylim * xlim
-  graph_bottom <- min(legend_params$text$y) - graph_height / 2
+  graph_bottom <- legend_params$rect$top - legend_params$rect$h
   rasterImage(graph, xleft = graph_left, ybottom = graph_bottom, 
-              xright = graph_left - graph_width, ytop = graph_bottom + graph_height * k)
+              xright = graph_left - graph_width, ytop = graph_bottom + legend_params$rect$h)
   
   # text(y = ylim, x = 0, sprintf("[%.1f~%.1f]", -zlim, zlim), adj = c(0.5,1))
 }

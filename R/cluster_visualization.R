@@ -11,6 +11,7 @@ cluster_visualization <- function(
   style_axis = c("default", "box", "text+box", "none"),
   style_legend = c("default", "none"),
   box_colors = "auto",
+  box_params = list(),
   one_plot = TRUE,
   which = 0,
   lwd = 1,
@@ -122,6 +123,7 @@ cluster_visualization <- function(
   }
   
   # for each cluster
+  box_params <- as.list(box_params)
   
   lapply(which, function(ii){
     
@@ -152,7 +154,9 @@ cluster_visualization <- function(
     }
     
     if(style_axis %in% c("text+box", 'box')) {
-      graphics::box(which = "plot", lty = 1, lwd = 2, col = box_colors[[ii]])
+      box_params$col <- box_colors[[ii]]
+      do.call(graphics::box, box_params)
+      # graphics::box(which = "plot", lty = 1, lwd = 2, col = box_colors[[ii]])
     }
     
     y_rect <- yrange
