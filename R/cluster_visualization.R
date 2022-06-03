@@ -13,6 +13,7 @@ cluster_visualization <- function(
   box_colors = "auto",
   one_plot = TRUE,
   which = 0,
+  lwd = 1,
   plot_range = NULL, yrange = NULL,
   before_plot = NULL, after_plot = NULL,
   main = NULL){
@@ -217,7 +218,7 @@ cluster_visualization <- function(
       m <- mse[, 1, jj, ii]
       se <- mse[, 2, jj, ii]
       
-      rutabaga::ebar_polygon(dnames$Time, m, sem = se, col = cols[jj])
+      rutabaga::ebar_polygon(dnames$Time, m, sem = se, col = cols[jj], lwd = lwd)
       
     })
     
