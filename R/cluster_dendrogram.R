@@ -28,11 +28,11 @@ cluster_visualization2 <- function(results, combines, main = NULL, ...) {
 
 #' @export
 cluster_dendrogram <- function(results, cex = 1, main = "Dendrogram", 
-                               legend_ncols = 5, legend_height = 1.5, 
+                               margin_right = 2.1, 
                                cex_leaf = 0.7, pal = "BlueGrayRed") {
   
   # list2env(list(cex = 1, main = "Dendrogram", 
-  #               legend_ncols = 5, legend_height = 1.5, cex_leaf = 0.7), envir=.GlobalEnv)
+  #               cex_leaf = 0.7), envir=.GlobalEnv)
   
   if(!identical(results$cluster_method, 'H-Clust')) {
     stop("Cluster dendrogram is only available for hierarchical clustering")
@@ -142,7 +142,7 @@ cluster_dendrogram <- function(results, cex = 1, main = "Dendrogram",
   
   
   
-  par(cex = cex, mar = c(0,1, 1, 2.4), xpd = TRUE)
+  par(cex = cex, mar = c(0,1, 1, margin_right), xpd = TRUE)
   
   # plot the horizontal dendrogram
   # remove the y axis and labels
