@@ -167,23 +167,58 @@ define_input(
 # )
 
 define_input(
-  definition = selectInput(inputId = 'distance_method', label = 'Clustering Distance Measurement',
-                           choices = c('euclidean', 'maximum',"manhattan", "canberra", 
-                                       "minkowski",  '1 - correlation','DTW'),
-                           selected = NULL),
+  definition = selectInput(
+    inputId = 'distance_method',
+    label = 'Clustering Distance Measurement',
+    choices = c(
+      "euclidean",
+      "maximum",
+      "manhattan",
+      "canberra",
+      "minkowski",
+      "DTW",
+      "1 - correlation",
+      "euclidean (weighted)",
+      "maximum (weighted)",
+      "manhattan (weighted)",
+      "canberra (weighted)",
+      "minkowski (weighted)",
+      "DTW (weighted)",
+      "1 - correlation (weighted)"
+    ),
+    selected = NULL
+  ), 
   init_args = c('selected'),
   init_expr = {
-    selected = cache_input('distance_method', 'manhattan')
+    selected = cache_input('distance_method', '1 - correlation')
   }
 )
 
 define_input(
-  definition = selectInput(inputId = 'mds_distance_method',label = 'MDS Distance Measurement',
-                           choices = c('euclidean', 'maximum', '1 - correlation',
-                                       "manhattan","canberra"), selected = NULL),
+  definition = selectInput(
+    inputId = 'mds_distance_method',
+    label = 'MDS Distance Measurement',
+    choices = c(
+      "euclidean",
+      "maximum",
+      "manhattan",
+      "canberra",
+      "minkowski",
+      "DTW",
+      "1 - correlation",
+      "euclidean (weighted)",
+      "maximum (weighted)",
+      "manhattan (weighted)",
+      "canberra (weighted)",
+      "minkowski (weighted)",
+      "DTW (weighted)",
+      "1 - correlation (weighted)"
+    ),
+    selected = NULL
+  ), 
   init_args = c('selected'),
   init_expr = {
-    selected = cache_input('mds_distance_method', 'manhattan')
+    selected = cache_input('mds_distance_method', '1 - correlation')
   }
 )
 

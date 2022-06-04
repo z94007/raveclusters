@@ -322,16 +322,11 @@ source("common.R", local = TRUE, chdir = TRUE)
         pattern = NULL, iteration = "list"), measure_distance = targets::tar_target_raw(name = "dis", 
         command = quote({
             {
-                if (isTRUE(distance_method == "1 - correlation")) {
-                  dis = as.dist(1 - cor(t(indata_analysis)))
-                } else if (isTRUE(distance_method == "DTW")) {
-                  dis = as.dist(dtw::dtwDist(indata_analysis))
-                } else {
-                  dis = dist(indata_analysis, method = distance_method)
-                }
+                dis <- raveclusters::calculate_distance(indata_analysis, 
+                  method = distance_method)
             }
             return(dis)
-        }), deps = c("distance_method", "indata_analysis"), cue = targets::tar_cue("thorough"), 
+        }), deps = c("indata_analysis", "distance_method"), cue = targets::tar_cue("thorough"), 
         pattern = NULL, iteration = "list"), calculate_clustering_index = targets::tar_target_raw(name = "cluster_index", 
         command = quote({
             {
@@ -438,13 +433,8 @@ source("common.R", local = TRUE, chdir = TRUE)
                   mds_result <- indata_analysis
                   rownames(mds_result) <- NULL
                 } else {
-                  mds_result <- switch(mds_distance, `1 - correlation` = {
-                    cmdscale(as.dist(1 - cor(t(indata_analysis))), 
-                      k = 2)
-                  }, {
-                    cmdscale(dist(indata_analysis, method = mds_distance), 
-                      k = 2)
-                  })
+                  mds_result <- cmdscale(as.dist(raveclusters::calculate_distance(indata_analysis, 
+                    method = mds_distance)), k = 2)
                 }
                 mds_result <- as.data.frame(mds_result)
                 names(mds_result) <- c("x", "y")

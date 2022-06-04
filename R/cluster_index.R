@@ -77,14 +77,8 @@ cluster_index <- function(
     get_dist <- function(){
       if(is.null(env$dist)) {
         dist_args <- as.list(dist_args)
-        if(identical(dist_args$method, "1 - correlation")) {
-          env$dist <- 1-cor(t(x))
-        } else if(identical(dist_args$method, "DTW")) {
-          env$dist <- dtw::dtwDist(x)
-        } else {
-          dist_args$x <- x
-          env$dist <- do.call(stats::dist, dist_args)
-        }
+        dist_args$x <- x
+        env$dist <- do.call(calculate_distance, dist_args)
         env$dist <- as.matrix(env$dist)
       }
       env$dist

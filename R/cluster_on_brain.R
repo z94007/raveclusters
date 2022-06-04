@@ -45,7 +45,11 @@ cluster_on_brain <- function(
   # get subjects & brain
   subjects <- unique(cluster_table$Subject)
   brain <- dipsaus::drop_nulls(lapply(subjects, function(sub){
-    raveio::rave_brain(sprintf('%s/%s', project_name, sub), surfaces = surface_types)
+    tryCatch({
+      raveio::rave_brain(sprintf('%s/%s', project_name, sub), surfaces = surface_types)
+    }, error = function(e){
+      NULL
+    })
   }))
   
   # check if the brain length is 0 or 1

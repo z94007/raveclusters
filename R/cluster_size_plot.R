@@ -7,13 +7,7 @@ cluster_idx_plot <- function(
   indata_analysis <- x
   rownames(indata_analysis) <- NULL
   if(missing(dis)) {
-    if(isTRUE(distance_method == '1 - correlation')){
-      dis = as.dist(1-cor(t(indata_analysis)))
-    }else if(isTRUE(distance_method == 'DTW')){
-      dis = as.dist(dtw::dtwDist(indata_analysis))
-    }else{
-      dis = dist(indata_analysis, method = distance_method)
-    }
+    dis <- calculate_distance(indata_analysis, method = distance_method)
   }
   dis <- as.matrix(dis)
   sa <- sample(seq_len(nrow(indata_analysis)))

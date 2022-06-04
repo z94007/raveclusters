@@ -17,59 +17,64 @@ shiny::bindEvent(
       return()
     }
     
-    # dipsaus::shiny_alert2(title = "Running clustering", icon = "info", text = "J")
+    # # dipsaus::shiny_alert2(title = "Running clustering", icon = "info", text = "J")
+    # 
+    # # set parameters
+    # # opt <- raveclusters::ravecluster_default_opts()
+    # if(inherits(local_storage$results, "PipelineResult")) {
+    #   local_storage$results$invalidate()
+    # }
     
-    # set parameters
-    # opt <- raveclusters::ravecluster_default_opts()
-    if(inherits(local_storage$results, "PipelineResult")) {
-      local_storage$results$invalidate()
-    }
-    
-    local_storage$results <- raveclusters::ravecluster(
-      names = c(
-        "settings",
-        "project", "collapsed", "cluster_method",
-        "condition_groups", "collapsed_array", "mse", "dis", "use_baseline",
-        "baseline", "indata_analysis", "indata_plot", "cluster_table",
-        "input_nclusters", "analysis_time_window", "plot_time_window",
-        "power_unit", "mds_result", "cluster_index",
-        "cluster_tree_plot"
-      ),
-      .async = TRUE,
-      input_groups = input$input_groups,
-      use_baseline = input$check_scale,
-      baseline_time = input$baseline_time,
-      distance_method = input$distance_method,
-      hclust_method = input$hclust_method,
-      cluster_method = input$input_method,
-      input_nclusters = input$input_nclusters,
-      roi_options = list(
-        variable = input$model_roi_variable,
-        values = input$filter_by_roi,
-        roi_ignore_gyrus_sulcus = input$roi_ignore_gyrus_sulcus,
-        roi_ignore_hemisphere = input$roi_ignore_hemisphere
-      ),
-      analysis_time_window = input$time_window,
-      plot_time_window = input$plot_time_window,
-      color_scheme = "Dark2",
-      power_unit = input$power_unit,
-      analysis_event = input$epoch_event,
-      mds_distance = input$mds_distance_method,
-      optim_clusters = list(
-        max_nclusters = 8,
-        methods = "default"
+    tryCatch({
+      # local_storage$results
+      local_data$results <- raveclusters::ravecluster(
+        names = c(
+          "settings",
+          "project", "collapsed", "cluster_method",
+          "condition_groups", "collapsed_array", "mse", "dis", "use_baseline",
+          "baseline", "indata_analysis", "indata_plot", "cluster_table",
+          "input_nclusters", "analysis_time_window", "plot_time_window",
+          "power_unit", "mds_result", "cluster_index",
+          "cluster_tree_plot"
+        ),
+        .async = FALSE,
+        input_groups = input$input_groups,
+        use_baseline = input$check_scale,
+        baseline_time = input$baseline_time,
+        distance_method = input$distance_method,
+        hclust_method = input$hclust_method,
+        cluster_method = input$input_method,
+        input_nclusters = input$input_nclusters,
+        roi_options = list(
+          variable = input$model_roi_variable,
+          values = input$filter_by_roi,
+          roi_ignore_gyrus_sulcus = input$roi_ignore_gyrus_sulcus,
+          roi_ignore_hemisphere = input$roi_ignore_hemisphere
+        ),
+        analysis_time_window = input$time_window,
+        plot_time_window = input$plot_time_window,
+        color_scheme = "Dark2",
+        power_unit = input$power_unit,
+        analysis_event = input$epoch_event,
+        mds_distance = input$mds_distance_method,
+        optim_clusters = list(
+          max_nclusters = 8,
+          methods = "default"
+        )
       )
-    )
+    }, error = function(e){
+      shiny::showNotification(e$message, duration = NULL, id = session$ns("error_notif"), type = "error")
+    })
     
-    local_storage$results$promise$then(
-      onFulfilled = function(...) {
-        results <- local_storage$results$get_values()
-        local_data$results <- results
-      },
-      onRejected = function(e) {
-        shiny::showNotification(e$message, duration = NULL, id = session$ns("error_notif"), type = "error")
-      }
-    )
+    # local_storage$results$promise$then(
+    #   onFulfilled = function(...) {
+    #     results <- local_storage$results$get_values()
+    #     local_data$results <- results
+    #   },
+    #   onRejected = function(e) {
+    #     shiny::showNotification(e$message, duration = NULL, id = session$ns("error_notif"), type = "error")
+    #   }
+    # )
     
     
   }),

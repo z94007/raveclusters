@@ -400,14 +400,7 @@ attr(indata_plot, "item_table") <- item_table
 Calculate the distance matrix based on `indata_analysis`
 
 ```{rave measure_distance, language = "R", export = 'dis'}
-
-if(isTRUE(distance_method == '1 - correlation')){
-  dis = as.dist(1-cor(t(indata_analysis)))
-}else if(isTRUE(distance_method == 'DTW')){
-  dis = as.dist(dtw::dtwDist(indata_analysis))
-}else{
-  dis = dist(indata_analysis, method = distance_method)
-}
+dis <- raveclusters::calculate_distance(indata_analysis, method = distance_method)
 ```
 
 Calculate cluster index
@@ -451,7 +444,7 @@ sel <- attr(indata_analysis, "complete_cases")
 item_table <- item_table[sel, , drop = FALSE]
 
 if (cluster_method == "H-Clust"){
-  hcl = stats::hclust(dis, method = hclust_method)
+  hcl = stats::hclust(d = dis, method = hclust_method)
   item_table$Cluster <- stats::cutree(hcl, k = n_clust)
   attr(item_table, "hclust") <- hcl
 } else if (cluster_method == "PAM") {
@@ -553,21 +546,10 @@ if(ncol(indata_analysis) == 2) {
   mds_result <- indata_analysis
   rownames(mds_result) <- NULL
 } else {
-  
-  mds_result <- switch (
-    mds_distance,
-    `1 - correlation` = {
-      cmdscale(
-        as.dist(1 - cor(t(indata_analysis))),
-        k = 2
-      )
-    }, {
-      cmdscale(
-        dist(indata_analysis, method = mds_distance),
-        k = 2
-      )
-    }
-  )
+  mds_result <- cmdscale(as.dist(
+    raveclusters::calculate_distance(indata_analysis, method = mds_distance)
+  ),
+  k = 2)
   
 }
 

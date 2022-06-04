@@ -93,7 +93,7 @@ visnet <- function(){
 
 mds_plot <- function(){
   # rave::rave_context()
-  results <- get_pipeline_results(fast_ok = TRUE)
+  results <- local_data$results
   
   shiny::validate(
     shiny::need(
@@ -151,12 +151,12 @@ dendrogram_plot <- function() {
     message = 'Only available for method = H-clust'
   )) 
   
-  raveclusters::cluster_dendrogram(results)
+  raveclusters::cluster_dendrogram(results, style_legend = "all", main = "")
   
 }
 
 optimal_cluster_number_plot <- function(){
-  results <- get_pipeline_results(fast_ok = TRUE)
+  results <- local_data$results
   
   shiny::validate(
     shiny::need(is.matrix(results$indata_analysis), 
@@ -212,9 +212,12 @@ cluster_plot <-  function(){
                               message = 'Please press "Run Analysis" button'))
   
   
+  mse <- results$mse
+  mse[is.na(mse)] <- 0
+  yrange <- quantile(c(mse[,1,,] - mse[,2,,], mse[,1,,] + mse[,2,,]), c(0.001, 0.999))
   raveclusters::cluster_visualization(
     results, color_scheme = "Beautiful Field",
-    cex = 1, plot_range = input$plot_time_window)
+    cex = 1, plot_range = input$plot_time_window, yrange = yrange)
   
 }
   

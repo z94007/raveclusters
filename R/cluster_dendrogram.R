@@ -27,15 +27,17 @@ cluster_visualization2 <- function(results, combines, main = NULL, ...) {
 
 
 #' @export
-cluster_dendrogram <- function(results, cex = 1, main = "Dendrogram", 
-                               margin_right = 2.1, 
-                               cex_leaf = 0.7, pal = "BlueGrayRed") {
+cluster_dendrogram <- function(
+    results, cex = 1, main = "Dendrogram", margin_right = 2.1, 
+    style_legend = c("all", "simplified", "none"),
+    cex_leaf = 0.7, pal = "BlueWhiteRed") {
   
-  # list2env(list(cex = 1, main = "Dendrogram", margin_right = 2.1, cex_leaf = 0.7, pal = "BlueGrayRed"), envir=.GlobalEnv)
+  # list2env(list(cex = 1, main = "Dendrogram", margin_right = 2.1, cex_leaf = 0.7, pal = "BlueGrayRed", style_legend = 'all'), envir=.GlobalEnv)
   
   if(!identical(results$cluster_method, 'H-Clust')) {
     stop("Cluster dendrogram is only available for hierarchical clustering")
   }
+  style_legend <- match.arg(style_legend)
   
   if(length(pal) == 1) {
     pal <- get_heatmap_palette(pal)
@@ -56,17 +58,12 @@ cluster_dendrogram <- function(results, cex = 1, main = "Dendrogram",
   
   n = length(labels)
   k = length(cluster_idx)
+  if(is.matrix(results$baseline_array)) {
+    legend_yrange <- quantile(results$baseline_array, c(0.001, 0.999), na.rm = TRUE)
+  } else {
+    legend_yrange <- NULL
+  }
   
-  tmpfile <- tempfile()
-  png(filename = tmpfile, width = 240 * k, height = 100)
-  par(mar = c(0.1,0,0.1,0), mfrow = c(k, 1))
-  cluster_visualization(results, style_title = "none", 
-                        style_analysis = "none", style_baseline = "none", 
-                        style_axis = "box", style_legend = "none", one_plot = FALSE,
-                        lwd = 3)
-  dev.off()
-  graph <- png::readPNG(tmpfile)
-  unlink(tmpfile)
   
   leafCol <- function(x, col){
     if(stats::is.leaf(x)){
@@ -117,7 +114,7 @@ cluster_dendrogram <- function(results, cex = 1, main = "Dendrogram",
   layout(matrix(c(3,4,1,2), ncol = 2), widths = c(3/4, 1/4), heights = c(lcm(1.3), 1))
   
   
-  par(mar = c(0, 1, 1.5, 1))
+  par(mar = c(0, 0.1, 1.5, 1))
   # plot_clean(xlim = c(0, 1), ylim = c(0, ylim))
   
   # combine mse
@@ -129,13 +126,14 @@ cluster_dendrogram <- function(results, cex = 1, main = "Dendrogram",
   
   zlen <- seq(-zlim, zlim, length.out = length(pal))
   zlegend <- matrix(zlen, ncol = 1)
+  plot_clean(c(0, 1), c(0, ylim))
   image(z = zlegend, col = pal,
-        yaxt = 'n', bty = 'n', xaxt = 'n', xlim = c(0, 1))
+        yaxt = 'n', bty = 'n', xaxt = 'n', xlim = c(0, 1), add = TRUE)
   zlen_txt <- sprintf("%.1f", c(-zlim, zlim))
   axis(3, c(0, 0.5, 1), labels = c(zlen_txt[1], "0", zlen_txt[2]), 
        tcl = -0.2, mgp = c(3, 0.25, 0), cex.axis = 0.6)
   
-  par(mar = c(0, 1, 0.1, 1))
+  par(mar = c(0, 0.1, 0.1, 1))
   plot_clean(c(0, 1), c(0, ylim))
   image( z, zlim = c(-zlim, zlim),
          y = seq(1.5, n-0.5, length.out = n),
@@ -155,22 +153,46 @@ cluster_dendrogram <- function(results, cex = 1, main = "Dendrogram",
   #add clustering cutting line
   MidPoint = (hclust$height[n - k] + hclust$height[n - k + 1]) / 2
   abline(v = MidPoint, lty = 2, col = "grey60")
-  text(x = MidPoint, y = 0, adj = 0, labels = sprintf("  Cut tree: k = %d", k), col = "grey60")
+  text(x = MidPoint, y = n + 1, adj = 0, labels = sprintf("  Cut tree: k = %d", k), col = "grey60")
   
-  legend_params <- legend('topleft', sprintf('Cluster %d', cluster_idx), 
-                          text.font = 2, cex = cex, bty = 'n', 
-                          text.col = cluster_col)
-  
-  graph_left <- legend_params$rect$left + legend_params$rect$w
-  if(k > 1) {
-    graph_height <- abs(legend_params$text$y[2] - legend_params$text$y[1])
-  } else {
-    graph_height <- legend_params$rect$h
+  if(style_legend != "none") {
+    legend_params <- legend('topleft', sprintf('Cluster %d', cluster_idx), 
+                            text.font = 2, cex = cex, bty = 'n', 
+                            text.col = cluster_col)
+    if(style_legend == "all") {
+      graph_left <- legend_params$rect$left + legend_params$rect$w
+      if(k > 1) {
+        graph_height <- abs(legend_params$text$y[2] - legend_params$text$y[1])
+      } else {
+        graph_height <- legend_params$rect$h
+      }
+      graph_width <- graph_height * 2.4 / ylim * xlim
+      graph_bottom <- min(legend_params$text$y) - graph_height / 2
+      
+      ndc_x <- grconvertX(c(graph_left, graph_left - graph_width), "user", "ndc")
+      ndc_y <- grconvertY(c(graph_bottom, graph_bottom + graph_height * seq_len(k)), "user", "ndc")
+      
+      for(jj in 1:k) {
+        par(
+          fig = c(
+            ndc_x,
+            ndc_y[c(jj, jj+1)]
+          ),
+          new = TRUE,
+          mar = c(0, 0, 0, 0)
+        )
+        
+        cluster_visualization(results, style_title = "none", 
+                              style_analysis = "none", style_baseline = "none", 
+                              style_axis = "none", style_legend = "none", 
+                              one_plot = FALSE, which = (k-jj) + 1, lwd = 0.8,
+                              yrange = legend_yrange)
+      }
+      
+      
+    }
   }
-  graph_width <- graph_height * 2.4 / ylim * xlim
-  graph_bottom <- legend_params$rect$top - legend_params$rect$h
-  rasterImage(graph, xleft = graph_left, ybottom = graph_bottom, 
-              xright = graph_left - graph_width, ytop = graph_bottom + legend_params$rect$h)
+  
   
   # text(y = ylim, x = 0, sprintf("[%.1f~%.1f]", -zlim, zlim), adj = c(0.5,1))
 }
