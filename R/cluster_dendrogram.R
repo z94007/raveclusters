@@ -28,9 +28,9 @@ cluster_visualization2 <- function(results, combines, main = NULL, ...) {
 
 #' @export
 cluster_dendrogram <- function(
-    results, cex = 1, main = "Dendrogram", margin_right = 2.1, 
+    results, main = "Dendrogram", margin_right = 2.1, 
     style_legend = c("all", "simplified", "none"),
-    cex_leaf = 0.7, pal = "BlueWhiteRed") {
+    cex = 1, cex_legend = 1, cex_leaf = 0.7, pal = "BlueWhiteRed") {
   
   # list2env(list(cex = 1, main = "Dendrogram", margin_right = 2.1, cex_leaf = 0.7, pal = "BlueGrayRed", style_legend = 'all'), envir=.GlobalEnv)
   
@@ -68,7 +68,7 @@ cluster_dendrogram <- function(
   leafCol <- function(x, col){
     if(stats::is.leaf(x)){
       attr(x,'label') <- labels[x]
-      attr(x, 'nodePar') <- list(lab.col = col, pch = 46, cex=0, lab.cex = cex_leaf)
+      attr(x, 'nodePar') <- list(lab.col = col, pch = 46, cex=0, lab.cex = cex_leaf * cex)
       attr(x, "edgePar") <- list(col = col)
     }else{
       if (is.null(attr(x, "edgePar"))) {
@@ -157,7 +157,7 @@ cluster_dendrogram <- function(
   
   if(style_legend != "none") {
     legend_params <- legend('topleft', sprintf('Cluster %d', cluster_idx), 
-                            text.font = 2, cex = cex, bty = 'n', 
+                            text.font = 2, cex = cex_legend * cex, bty = 'n', 
                             text.col = cluster_col)
     if(style_legend == "all") {
       graph_left <- legend_params$rect$left + legend_params$rect$w
