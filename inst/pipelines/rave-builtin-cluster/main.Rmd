@@ -17,17 +17,15 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 build_pipeline <- raveio::configure_knitr()
 # Debug use
 # Please set working directory to be in the source file
-if(FALSE){
-  local({
-    f <- c(
-      file.path(tempdir(), "rave-builtin-cluster", '0.0.1', 'settings.yaml'),
-      'settings.yaml'
-    )
-    f <- f[file.exists(f)][[1]]
-    settings <- raveio::load_yaml(f)
-    list2env(as.list(settings), envir = globalenv())
-  })
-}
+local({
+  f <- c(
+    file.path(tempdir(), "rave-builtin-cluster", '0.0.1', 'settings.yaml'),
+    file.path(rstudioapi::getActiveProject(), "inst", 'pipelines', 'rave-builtin-cluster', 'settings.yaml')
+  )
+  f <- f[file.exists(f)][[1]]
+  settings <- raveio::load_yaml(f)
+  list2env(as.list(settings), envir = globalenv())
+})
 debug <- TRUE
 ```
 
@@ -355,11 +353,15 @@ The result, `indata_analysis` has an attribute `attr(indata_analysis, "complete_
 ```{rave slice_data_by_anslysis_window, export="indata_analysis"}
 library(rutabaga)
 # Filter by analysis window first
-indata_analysis <- lapply(baseline, function(item){
-  # item <- baseline[[1]]
-  item$data[, item$time %within% analysis_time_window, drop = TRUE]
-})
-indata_analysis <- do.call("cbind", indata_analysis)
+time_table <- attr(collapsed_array, "time_table")
+
+baseline_sel <- time_table$Time %within% baseline_time
+column_sel <- time_table$Time %within% analysis_time_window
+
+tmp <- ravetools::baseline_array(collapsed_array, 2L, baseline_indexpoints = which(column_sel), method = "zscore")
+
+indata_analysis <- tmp[, column_sel, drop = FALSE]
+
 
 # Only keep complete data (No NA)
 sel <- stats::complete.cases(indata_analysis)

@@ -287,11 +287,13 @@ source("common.R", local = TRUE, chdir = TRUE)
         command = quote({
             {
                 library(rutabaga)
-                indata_analysis <- lapply(baseline, function(item) {
-                  item$data[, item$time %within% analysis_time_window, 
-                    drop = TRUE]
-                })
-                indata_analysis <- do.call("cbind", indata_analysis)
+                time_table <- attr(collapsed_array, "time_table")
+                baseline_sel <- time_table$Time %within% baseline_time
+                column_sel <- time_table$Time %within% analysis_time_window
+                tmp <- ravetools::baseline_array(collapsed_array, 
+                  2L, baseline_indexpoints = which(column_sel), 
+                  method = "zscore")
+                indata_analysis <- tmp[, column_sel, drop = FALSE]
                 sel <- stats::complete.cases(indata_analysis)
                 if (!sum(sel)) {
                   stop("The analysis window cannot have missing data, but all signals contain missing values. Try narrowing the analysis range")
@@ -303,7 +305,7 @@ source("common.R", local = TRUE, chdir = TRUE)
                 attr(indata_analysis, "item_table") <- item_table
             }
             return(indata_analysis)
-        }), deps = c("baseline", "analysis_time_window", "collapsed_array"
+        }), deps = c("collapsed_array", "baseline_time", "analysis_time_window"
         ), cue = targets::tar_cue("thorough"), pattern = NULL, 
         iteration = "list"), slice_data_by_ploting_window = targets::tar_target_raw(name = "indata_plot", 
         command = quote({
@@ -363,7 +365,7 @@ source("common.R", local = TRUE, chdir = TRUE)
                 sel <- attr(indata_analysis, "complete_cases")
                 item_table <- item_table[sel, , drop = FALSE]
                 if (cluster_method == "H-Clust") {
-                  hcl = stats::hclust(dis, method = hclust_method)
+                  hcl = stats::hclust(d = dis, method = hclust_method)
                   item_table$Cluster <- stats::cutree(hcl, k = n_clust)
                   attr(item_table, "hclust") <- hcl
                 } else if (cluster_method == "PAM") {
