@@ -402,7 +402,7 @@ attr(indata_plot, "item_table") <- item_table
 Calculate the distance matrix based on `indata_analysis`
 
 ```{rave measure_distance, language = "R", export = 'dis'}
-dis <- raveclusters::calculate_distance(indata_analysis, method = distance_method)
+dis <- raveclusters::calculate_distance(indata_analysis, method =distance_method)
 ```
 
 Calculate cluster index
@@ -636,9 +636,9 @@ build_pipeline(make_file = "make-rave-builtin-cluster.R")
 Sys.setenv("RAVE_PIPELINE" = normalizePath("."))
 # raveio::pipeline_visualize(level_separation = 20)
 local({
-  pipe_dir <- raveio:::activate_pipeline(".")
+  pipe_dir <- raveio:::activate_pipeline(file.path(rstudioapi::getActiveProject(), "inst", 'pipelines', 'rave-builtin-cluster'))
   targets::tar_destroy(ask = FALSE)
-  targets::tar_visnetwork(targets_only = TRUE, shortcut = FALSE, level_separation = 1000, zoom_speed = 0.3)
+  targets::tar_visnetwork(targets_only = TRUE, shortcut = FALSE, level_separation = 200, zoom_speed = 0.3)
 })
 ```
 

@@ -28,14 +28,17 @@ cluster_visualization2 <- function(results, combines, main = NULL, ...) {
 
 #' @export
 cluster_dendrogram <- function(
-    results, type = c("tree", "fan"), 
+    results, cluster_excluded = NULL,
+    type = c("tree", "fan"), 
     adjust_heights = FALSE,
     main = "Dendrogram", 
     style_legend = c("all", "simplified", "none"),
     margin_right = 2.1, 
     cex = 1, cex_legend = 1, cex_leaf = 0.7, pal = "BlueWhiteRed") {
   
-  # list2env(list(main = "Dendrogram", margin_right = 2.1, style_legend = c("all", "simplified", "none"),cex = 1, cex_legend = 1, cex_leaf = 0.7, pal = "BlueWhiteRed"), envir=.GlobalEnv)
+  # list2env(list(main = "Dendrogram", margin_right = 2.1, 
+  # style_legend = c("all", "simplified", "none"),cex = 1, cex_legend = 1, 
+  # cex_leaf = 0.7, pal = "BlueWhiteRed"), envir=.GlobalEnv)
   
   if(!identical(results$cluster_method, 'H-Clust')) {
     stop("Cluster dendrogram is only available for hierarchical clustering")
@@ -72,6 +75,7 @@ cluster_dendrogram <- function(
   }
   
   if(is.matrix(results$baseline_array)) {
+    #legend_yrange <- quantile(baseline_array, c(0.001, 0.999), na.rm = TRUE)
     legend_yrange <- quantile(results$baseline_array, c(0.001, 0.999), na.rm = TRUE)
   } else {
     legend_yrange <- NULL
@@ -95,7 +99,7 @@ cluster_dendrogram <- function(
   # define the dendrogram
   
   dend <- stats::as.dendrogram(hclust)
-  dend_order <- order.dendrogram(dend)
+  
   
   #color the nodes(leaves) and branches of the dendrogram (from dendextend package color_branches)
   g <- stats::cutree(hclust, k = k)
@@ -115,8 +119,13 @@ cluster_dendrogram <- function(
   dend <- descendTree(dend) 
   class(dend) <- 'dendrogram'
   
+  dend <- dendextend::prune(dend, 
+                            labels[cluster_table$Cluster %in% as.numeric(cluster_excluded)])
+  
+  dend_order <- order.dendrogram(dend)
+  
   xlim <- attr(dend, "height")
-  ylim <- n + 1
+  ylim <- length(dend_order) + 1
   
   #set layout
   switch (
@@ -140,7 +149,8 @@ cluster_dendrogram <- function(
   
   # combine mse
   indata_analysis <- results$indata_analysis
-  z <- t(indata_analysis[dend_order, , drop=FALSE])
+  z <- t(indata_analysis[!(cluster_table$Cluster %in% as.numeric(cluster_excluded)), ,
+                         drop=FALSE][dend_order,])
   zlim <- quantile(abs(z), 0.99, na.rm = TRUE)
   z[z > zlim] <- zlim
   z[z < -zlim] <- -zlim
@@ -157,19 +167,23 @@ cluster_dendrogram <- function(
   par(mar = c(0, 0, 0.1, 1))
   plot_clean(c(0, 1), c(0, ylim), xaxs = "i")
   image( z, zlim = c(-zlim, zlim),
-         y = seq(1.5, n-0.5, length.out = n),
+         y = seq(1.5, length(dend_order)-0.5, length.out = length(dend_order)),
          col= pal, ylim = c(0, ylim), add = TRUE,
          yaxt = 'n',bty = 'n', xaxt= 'n')
   
   par(mar = c(0, 0, 0.1, 0))
   plot_clean(c(0, 1), c(0, ylim), xaxs = "i")
+  
   image(matrix(
-    cluster_table$Cluster[dend_order],
+    cluster_table$Cluster[!(cluster_table$Cluster %in% as.numeric(cluster_excluded)),
+                          drop=FALSE][dend_order],
     nrow = 1
-  ), y = seq.int(1, n), add = TRUE, yaxt = 'n',bty = 'n', xaxt= 'n',
-  col = cluster_col, useRaster = TRUE)
+  ), y = seq(1.5, length(dend_order)-0.5, length.out = length(dend_order)), 
+  add = TRUE, yaxt = 'n',bty = 'n', xaxt= 'n',
+  col = cluster_col, zlim = c(1,max(cluster_table$Cluster)),useRaster = TRUE)
   
   par(cex = cex, mar = c(0, 1, 1.5, 1))
+  
   plot_clean(c(0,1), c(0,1), main = main)
   
   if(type == "fan") {

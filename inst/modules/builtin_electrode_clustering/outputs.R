@@ -151,7 +151,15 @@ dendrogram_plot <- function() {
     message = 'Only available for method = H-clust'
   )) 
   
-  raveclusters::cluster_dendrogram(results, style_legend = "all", main = "")
+  cluster_idx <- attr(results$cluster_table, "cluster_idx")
+  cluster_excluded <- cluster_idx[!cluster_idx %in% input$cluster_selected ]
+  
+  raveclusters::cluster_dendrogram(
+    results,
+    cluster_excluded = cluster_excluded,
+    style_legend = "all",
+    main = ""
+  )
   
 }
 

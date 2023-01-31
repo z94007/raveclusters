@@ -79,19 +79,7 @@ define_input(
 #   reactive_target = 'local_data$analysis_data_raw', try_load_yaml = TRUE
 # )
 
-define_input(
-  definition = checkboxInput(inputId = 'check_scale', label = 'Z-score data',
-                             value = TRUE
-  )
-)
 
-define_input(
-  definition = sliderInput(inputId = 'baseline_time', label = 'Baseline window for z-score', 
-                           min = -1, 
-                           max= 3,
-                           value = c(-1,0),
-                           step = 0.1)
-)
 
 # define_input(
 #   definition = textInput(inputId = 'text_electrode', label = 'Electrode Not loaded'),
@@ -158,6 +146,20 @@ define_input(
                            min = -1, 
                            max= 2,
                            value = c(0,1.0),
+                           step = 0.1)
+)
+
+define_input(
+  definition = checkboxInput(inputId = 'check_scale', label = 'Z-score data',
+                             value = TRUE
+  )
+)
+
+define_input(
+  definition = sliderInput(inputId = 'baseline_time', label = 'Baseline window for z-score', 
+                           min = -1, 
+                           max= 2,
+                           value = c(-1,0),
                            step = 0.1)
 )
 
@@ -288,7 +290,11 @@ define_input(
   checkboxInput('roi_ignore_gyrus_sulcus', 'Collapse gyrus/sulcus', value = FALSE)
 )
 
-
+#future plan is to place this input box to the dendrogram chunk
+define_input(
+  selectInput('cluster_selected', 'clusters included in dendrogram', choices = '', 
+              selected = character(0), multiple = TRUE)
+)
 
 
 input_layout = list(
@@ -324,7 +330,8 @@ input_layout = list(
     'hclust_method',
     'distance_method',
     'mds_distance_method',
-    'input_nclusters'
+    'input_nclusters',
+    'cluster_selected'
   ),
   
   'Export Settings' = list(

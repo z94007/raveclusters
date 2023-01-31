@@ -1,6 +1,13 @@
 library(targets)
 library(raveio)
 source("common.R", local = TRUE, chdir = TRUE)
+lapply(sort(list.files(
+  "R/", ignore.case = TRUE,
+  pattern = "^shared-.*\\.R", 
+  full.names = TRUE
+)), function(f) {
+  source(f, local = FALSE, chdir = TRUE)
+})
 ...targets <- list(`__Check_settings_file` = targets::tar_target_raw("settings_path", 
     "settings.yaml", format = "file"), `__Load_settings` = targets::tar_target_raw("settings", 
     quote({

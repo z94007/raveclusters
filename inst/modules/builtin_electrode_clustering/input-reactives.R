@@ -46,6 +46,16 @@ shiny::bindEvent(
   ignoreNULL = TRUE, ignoreInit = TRUE
 )
 
+#Update inputs when `input$do_run` button is pressed
+shiny::bindEvent(
+  observe(  # Update clusters included in the dendrogram
+    updateSelectInput(session, 'cluster_selected', choices = 1:input$input_nclusters,
+                      selected = 1:input$input_nclusters)),
+  input$do_run,
+  ignoreNULL = TRUE, ignoreInit = TRUE
+
+)
+
 # Update inputs when local_data$source_data is changed (after data_import_btn being pressed and data loaded)
 shiny::bindEvent(
   observe({
@@ -92,6 +102,8 @@ shiny::bindEvent(
     var_fe_avail <- nms[! nms %in% c(dvs, dnu, var_roi_avail)]
     var_roi_avail <- stringr::str_remove_all(var_roi_avail, RAVE_ROI_KEY)
     
+    
+    
     # Load yaml configurations 
     confs <- dipsaus::drop_nulls(source_data$confs)
     groups <- list()
@@ -134,6 +146,7 @@ shiny::bindEvent(
       session = session, inputId = 'plot_time_window', min = time_range[[1]], 
       max = time_range[[2]], value = time_range)
     
+    
     # update response variable -- choices = dvs, with first option selected 
     # updateSelectInput(session, 'trial_selected', choices = dvs, selected = dvs)
     updateSelectInput(session, 'power_unit', choices = power_unit, 
@@ -144,6 +157,8 @@ shiny::bindEvent(
     # Update ROI variable
     updateSelectInput(session, 'model_roi_variable', choices = var_roi_avail,
                       selected = input$model_roi_variable %OF% var_roi_avail)
+    
+
     
   }),
   local_data$source_data,
